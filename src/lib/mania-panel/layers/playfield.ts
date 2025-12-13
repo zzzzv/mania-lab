@@ -43,17 +43,21 @@ export function createNoteColorSelector(
   };
 }
 
-export function renderPlayfield(ctx: Context, layer: Konva.Layer) {
+export function render(ctx: Context, layer: Konva.Layer) {
   layer.destroyChildren();
 
-  ctx.barline.createElement ??= createBarLines;
+  ctx.barline.createElement ??= createBarLine;
   const barLines = createBarLines(ctx);
   layer.add(barLines);
 
   ctx.note.selectColor ??= createNoteColorSelector();
-  ctx.note.createElement ??= createNotes;
+  ctx.note.createElement ??= createNote;
   const notes = createNotes(ctx);
   layer.add(notes);
+
+  ctx.axis.createElement ??= createAxisLabel;
+  const axisLabels = createAxisLabels(ctx);
+  layer.add(axisLabels);
 
   layer.batchDraw();
 }
@@ -90,7 +94,7 @@ function generateBarLinePositions(
 function createBarLine(ctx: Context, time: number) {
   const y = translateTime(ctx, time);
   const line = new Konva.Line({
-    points: [0, y, ctx.stage.width - ctx.scroll.width, y],
+    points: [0, y, ctx.stage.width - ctx.scroll.width - ctx.axis.width, y],
     stroke: ctx.barline.color,
     strokeWidth: ctx.barline.strokeWidth,
   });
@@ -99,7 +103,7 @@ function createBarLine(ctx: Context, time: number) {
 
 function createBarLines(ctx: Context) {
   const group = new Konva.Group({
-    x: ctx.playField.x,
+    x: ctx.scroll.width,
     y: 0,
   });
   const barLinePositions = generateBarLinePositions(ctx.beatmap.timingPoints, 0, ctx.beatmap.duration);
@@ -109,6 +113,47 @@ function createBarLines(ctx: Context) {
     }
     const barLine = createBarLine(ctx, time);
     group.add(barLine);
+  }
+  return group;
+}
+
+function createAxisLabel(ctx: Context, time: number) {
+  const y = translateTime(ctx, time);
+  const minutes = Math.floor(time / 60000);
+  const seconds = Math.floor((time % 60000) / 1000);
+  const style = seconds === 0 ? ctx.axis.minute : ctx.axis.second;
+  const label = seconds === 0 ? `${minutes}` : `${seconds}`;
+
+  const group = new Konva.Group();
+  const line = new Konva.Line({
+    points: [0, y, ctx.axis.width - style.fontSize - 8, y],
+    stroke: style.color,
+    strokeWidth: 1,
+  });
+  const text = new Konva.Text({
+    x: ctx.axis.width - style.fontSize - 5,
+    y: y - style.fontSize / 2,
+    text: label,
+    fontSize: style.fontSize,
+    fill: style.color,
+  });
+  group.add(line);
+  group.add(text);
+  return group;
+}
+
+function createAxisLabels(ctx: Context) {
+  const x = ctx.scroll.width + ctx.beatmap.keys * ctx.note.width;
+  const group = new Konva.Group({
+    x,
+    y: 0,
+  });
+  for (let time = 1000; time < ctx.beatmap.duration; time += 1000) {
+    if (time < ctx.state.startTime || time > ctx.state.endTime) {
+      continue;
+    }
+    const label = createAxisLabel(ctx, time);
+    group.add(label);
   }
   return group;
 }
@@ -129,12 +174,16 @@ function createNote(ctx: Context, note: Note) {
     fill: color,
     cornerRadius: ctx.note.rx,
   });
+  rect.setAttr('getData', () => ({
+    start: note.start,
+    end: note.end,
+  }));
   return rect;
 }
 
 function createNotes(ctx: Context) {
   const group = new Konva.Group({
-    x: ctx.playField.x,
+    x: ctx.scroll.width,
     y: 0,
   });
   const noteHeightTimeOffset = (ctx.note.height / ctx.stage.height) * (ctx.state.endTime - ctx.state.startTime);

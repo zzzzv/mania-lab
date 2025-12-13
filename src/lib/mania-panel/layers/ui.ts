@@ -2,7 +2,7 @@ import Konva from 'konva';
 import type { Context } from '../options';
 import { clamp } from '../utils';
 
-export function renderUI(ctx: Context, layer: Konva.Layer) {
+export function render(ctx: Context, layer: Konva.Layer) {
   layer.destroyChildren();
 
   if (ctx.background.enabled) {
@@ -32,6 +32,7 @@ export function createBackground(ctx: Context) {
   return bg;
 }
 
+
 function getNps(beatmap: Context['beatmap'], countTails = false) {
   const nps: number[] = Array.from({ length: beatmap.duration / 1000 }, () => 0);
   for (const note of beatmap.notes) {
@@ -54,12 +55,13 @@ export function createScrollNps(ctx: Context) {
   for (let i = 0; i < nps.length; i++) {
     const barWidth = (nps[i] / maxNps) * ctx.scroll.width;
     const rect = new Konva.Rect({
-      x: ctx.scroll.side === 'left' ? ctx.scroll.width - barWidth : 0,
+      x: ctx.scroll.width - barWidth,
       y: ctx.stage.height - barHeight * (i + 1) + 1,
       width: barWidth,
       height: barHeight - 2,
       fill: ctx.scroll.nps.color,
     });
+    rect.setAttr('getData', () => ({ time: i * 1000, nps: nps[i] }));
     group.add(rect);
   }
   return group;
@@ -91,7 +93,7 @@ export function createScrollWindow(ctx: Context) {
     x: ctx.scroll.x,
     y: 0,
   });
-
+  
   const rect = new Konva.Rect({
     x: 0,
     y: init.topY,
@@ -108,6 +110,10 @@ export function createScrollWindow(ctx: Context) {
       };
     },
   });
+  rect.setAttr('getData', () => ({
+    start: Math.round(ctx.state.startTime),
+    end: Math.round(ctx.state.endTime),
+  }));
 
   const topHandle = new Konva.Rect({
     x: 0,

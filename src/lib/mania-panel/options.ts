@@ -4,6 +4,7 @@ import type { Beatmap, Note } from '~/lib/mania-replay/src';
 export type noteColorSelector = (keys: number, object: Note) => string;
 export type Element = Konva.Group | Konva.Shape;
 export type elementCreator<T> = (ctx: Context, object: T) => Element;
+export type formatter<T> = (data: T) => string;
 
 export const defaultOptions = {
   background: {
@@ -34,11 +35,27 @@ export const defaultOptions = {
     /** Custom function to create bar line elements */
     createElement: undefined as elementCreator<number> | undefined,
   },
+  axis: {
+    /** Width of the axis area in px */
+    width: 30,
+    /** Style for labels at whole minutes (e.g., 1:00, 2:00) */
+    minute: {
+      color: '#FF3F00',
+      strokeWidth: 2,
+      fontSize: 18,
+    },
+    /** Style for second labels */
+    second: {
+      color: '#FFFFFF',
+      strokeWidth: 1,
+      fontSize: 18,
+    },
+    /** Custom function to create axis elements */
+    createElement: undefined as elementCreator<number> | undefined,
+  },
   scroll: {
     /** Width of the scrollbar in px */
     width: 80,
-    /** Side of the scrollbar */
-    side: 'left' as 'left' | 'right',
     /** Time window for the scrollbar in milliseconds */
     window: {
       min: 2000, // ms
@@ -55,9 +72,11 @@ export const defaultOptions = {
       createElement: undefined as elementCreator<void> | undefined,
     },
   },
-  tooltips: {
+  tooltip: {
     /** Whether to show tooltips on notes */
     enabled: true,
+    /** Custom function to format tooltip text */
+    format: undefined as formatter<any> | undefined,
   },
   stage: {
     /** Width of the stage in px */
@@ -78,14 +97,11 @@ export function resolveOptions(beatmap: Beatmap, options: Options) {
   const beatmapDuration = Math.ceil(lastEnd / 1000) * 1000;
 
   const noteWidth = options.note.width === 'auto'
-    ? (options.stage.width as number) - options.scroll.width / beatmap.keys
+    ? ((options.stage.width as number) - options.scroll.width - options.axis.width) / beatmap.keys
     : options.note.width;
   const stageWidth = options.stage.width === 'auto'
-    ? beatmap.keys * (options.note.width as number) + options.scroll.width
+    ? beatmap.keys * (options.note.width as number) + options.scroll.width + options.axis.width
     : options.stage.width;
-
-  const scrollX = options.scroll.side === 'left' ? 0 : stageWidth - options.scroll.width;
-  const playFieldX = options.scroll.side === 'left' ? options.scroll.width : 0;
 
   const listeners: Array<() => void> = [];
 
@@ -93,7 +109,6 @@ export function resolveOptions(beatmap: Beatmap, options: Options) {
     startTime: 0,
     endTime: options.scroll.window.default,
     onChange: {
-      listeners,
       emit: () => listeners.forEach(fn => fn()),
       subscribe: (fn: () => void) => {
         listeners.push(fn);
@@ -118,9 +133,6 @@ export function resolveOptions(beatmap: Beatmap, options: Options) {
     scroll: {
       ...options.scroll,
       x: scrollX,
-    },
-    playField: {
-      x: playFieldX,
     },
     stage: {
       ...options.stage,

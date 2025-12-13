@@ -2,7 +2,7 @@ import Konva from 'konva';
 import type { Beatmap } from '~/lib/mania-replay/src';
 import { defaultOptions, resolveOptions } from './options';
 import type { Options } from './options';
-import { UI, PlayField } from './layers';
+import { UI, PlayField, Tooltip } from './layers';
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
@@ -39,17 +39,20 @@ export function createPanel(container: HTMLDivElement, optionsOverride?: DeepPar
   stage.add(uiLayer);
   const playfieldLayer = new Konva.Layer();
   stage.add(playfieldLayer);
+  const tooltipLayer = new Konva.Layer();
+  stage.add(tooltipLayer);
 
   const render = (beatmap: Beatmap) => {
     const ctx = resolveOptions(beatmap, options);
     stage.width(ctx.stage.width);
     stage.height(ctx.stage.height);
 
-    UI.renderUI(ctx, uiLayer);
+    UI.render(ctx, uiLayer);
     ctx.state.onChange.subscribe(() => {
-      PlayField.renderPlayfield(ctx, playfieldLayer);
+      PlayField.render(ctx, playfieldLayer);
     });
-    PlayField.renderPlayfield(ctx, playfieldLayer);
+    PlayField.render(ctx, playfieldLayer);
+    Tooltip.render(ctx, tooltipLayer);
   }
 
   return {
