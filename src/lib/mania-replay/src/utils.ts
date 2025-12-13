@@ -1,0 +1,111 @@
+import type { Beatmap, Note, ReplayFrame, Result } from './types';
+
+export interface NoteQueue {
+  peek(): Note | null;
+  pop(): Note | null;
+}
+
+export function createQueues(beatmap: Beatmap): NoteQueue[] {
+  const sortedNotes = beatmap.notes.sort((a, b) => a.start - b.start);
+  const columns: Note[][] = Array.from({ length: beatmap.keys }, () => []);
+  for (const note of sortedNotes) {
+    columns[note.column].push(note);
+  }
+  const offsets = columns.map(() => 0);
+
+  const makeQueue = (col: number): NoteQueue => ({
+    peek: () => {
+      return offsets[col] < columns[col].length ? columns[col][offsets[col]] : null;
+    },
+    pop: () => {
+      if (offsets[col] < columns[col].length) {
+        const note = columns[col][offsets[col]];
+        offsets[col]++;
+        return note;
+      }
+      return null;
+    },
+  });
+
+  return columns.map((_, i) => makeQueue(i));
+}
+
+export type Action = 'none' | 'press' | 'hold' | 'release';
+
+export interface ActionFrame {
+  time: number;
+  actions: Action[];
+}
+
+function *generateFramesByMs(frames: ReplayFrame[]): Generator<ReplayFrame> {
+  if (frames.length === 0) return;
+  
+  const keys = frames[0].keyStates.length;
+  let lastStates = Array.from({ length: keys }, () => false);
+  let currentTime = frames[0].time;
+  let frameIndex = 0;
+
+  while (frameIndex < frames.length) {
+    const frame = frames[frameIndex];
+    if (frame.time > currentTime) {
+      yield {
+        time: currentTime,
+        keyStates: lastStates,
+      };
+      currentTime++;
+    } else {
+      yield frame;
+      lastStates = frame.keyStates;
+      frameIndex++;
+    }
+  }
+}
+
+export function *generateActions(frames: ReplayFrame[], resolution: 'ms' | 'replay' = 'replay'): Generator<ActionFrame> {
+  const keys = frames[0].keyStates.length;
+  const iter = resolution === 'ms' ? generateFramesByMs(frames) : frames;
+  let lastStates = Array.from({ length: keys }, () => false);
+
+  for (const frame of iter) {
+    const actionFrame = {
+      time: frame.time,
+      actions: [] as Action[]
+    };
+    for (let i = 0; i < keys; i++) {
+      const action = lastStates[i]
+        ? (frame.keyStates[i] ? 'hold' : 'release')
+        : (frame.keyStates[i] ? 'press' : 'none');
+      actionFrame.actions.push(action);
+    }
+    lastStates = frame.keyStates;
+    yield actionFrame;
+  }
+}
+
+export function summarize(results: Result[]) {
+  const counts = [] as number[];
+  let totalAcc = 0;
+  let totalHits = 0;
+  let maxCombo = 0;
+  let currentCombo = 0;
+
+  for (const res of results) {
+    counts[res.level] = (counts[res.level] || 0) + 1;
+    totalAcc += res.acc || 0;
+    totalHits++;
+    if (res.combo !== undefined) {
+      currentCombo += res.combo;
+      if (currentCombo > maxCombo) {
+        maxCombo = currentCombo;
+      }
+    } else {
+      currentCombo = 0;
+    }
+  }
+  return {
+    counts,
+    totalHits: totalHits,
+    accuracy: totalHits > 0 ? totalAcc / totalHits : 0,
+    maxCombo,
+  };
+}
