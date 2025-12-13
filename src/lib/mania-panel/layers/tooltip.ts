@@ -48,7 +48,7 @@ function formatTooltipText(data: any) {
   return lines.join('\n');
 }
 
-function createTooltip(ctx: Context) {
+function createTooltip(_: Context) {
   const label = new Konva.Label({
     opacity: 0.75,
     visible: false,

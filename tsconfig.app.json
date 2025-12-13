@@ -17,5 +17,10 @@
     "noUncheckedSideEffectImports": true,
     "noUncheckedIndexedAccess": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/tests/**"
+  ]
 }

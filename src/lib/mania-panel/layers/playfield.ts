@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Beatmap, Note, TimingPoint } from '~/lib/mania-replay/src';
+import type { Note, TimingPoint } from '~/lib/mania-replay/src';
 import type { Context } from '../options';
 
 export const presetColorSchemes = [
