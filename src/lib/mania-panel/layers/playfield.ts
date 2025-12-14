@@ -180,8 +180,10 @@ function createNote(ctx: Context, note: Note | PlayedNote) {
     cornerRadius: ctx.note.rx,
   });
   const result = 'result' in note ? {
-    ...note.result,
+    time: note.result.time,
     level: levelNames[note.result.level],
+    offset: note.result.offset,
+    release: note.result.releaseOffset,
   } : undefined;
   rect.setAttr('getData', () => ({
     name: 'Note',

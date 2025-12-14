@@ -48,22 +48,18 @@ function getData(shape: any) {
 }
 
 function formatTooltipText(data: any): string {
-  const shortNames: Record<string, string> = {
-    releaseOffset: 'release'
-  };
   const getLines = (obj: any): string[] => {
     return Object.entries(obj)
       .filter(([_, value]) => value !== undefined)
       .reduce<string[]>((lines, [key, value]) => {
-        const shortKey = shortNames[key] || key;
         if (key === 'name' || key === 'title') {
           lines.unshift(`${value}`);
         } else if (typeof value === 'object') {
-          lines.push(`${shortKey}: {`);
+          lines.push(`${key}: {`);
           lines.push(...getLines(value).map(line => `  ${line}`));
           lines.push(`}`);
         } else {
-          lines.push(`${shortKey}: ${value}`);
+          lines.push(`${key}: ${value}`);
         }
         return lines;
       }, []);
