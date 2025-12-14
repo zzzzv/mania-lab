@@ -1,6 +1,7 @@
 import Konva from 'konva';
-import type { Note, TimingPoint } from '~/lib/mania-replay/src';
-import type { Context } from '../options';
+import type { Note, TimingPoint, ReplayFrame, PlayedNote } from '~/lib/mania-replay/src';
+import { levelNames } from '~/lib/mania-replay/src';
+import type { Context, KeyAction } from '../options';
 
 export const presetColorSchemes = [
   '#FFFFFF',
@@ -54,6 +55,10 @@ export function render(ctx: Context, layer: Konva.Layer) {
   ctx.note.createElement ??= createNote;
   const notes = createNotes(ctx);
   layer.add(notes);
+
+  ctx.replay.createElement ??= createKeyAction;
+  const keyActions = createKeyActions(ctx);
+  layer.add(keyActions);
 
   ctx.axis.createElement ??= createAxisLabel;
   const axisLabels = createAxisLabels(ctx);
@@ -158,7 +163,7 @@ function createAxisLabels(ctx: Context) {
   return group;
 }
 
-function createNote(ctx: Context, note: Note) {
+function createNote(ctx: Context, note: Note | PlayedNote) {
   const bottomY = translateTime(ctx, note.start);
   const topY = note.end ? translateTime(ctx, note.end) : bottomY - ctx.note.height;
   const height = bottomY - topY;
@@ -174,9 +179,15 @@ function createNote(ctx: Context, note: Note) {
     fill: color,
     cornerRadius: ctx.note.rx,
   });
+  const result = 'result' in note ? {
+    ...note.result,
+    level: levelNames[note.result.level],
+  } : undefined;
   rect.setAttr('getData', () => ({
+    name: 'Note',
     start: note.start,
     end: note.end,
+    result,
   }));
   return rect;
 }
@@ -194,6 +205,69 @@ function createNotes(ctx: Context) {
     }
     const noteShape = createNote(ctx, note);
     group.add(noteShape);
+  }
+  return group;
+}
+
+function *generateActions(replay: ReplayFrame[]) {
+  const keys = replay[0].keyStates.length;
+  const pressTimes: (number | null)[] = Array.from({ length: keys }, () => null);
+
+  for (const frame of replay) {
+    for (let i = 0; i < keys; i++) {
+      const isPressed = frame.keyStates[i];
+      const pressTime = pressTimes[i];
+      if (isPressed && pressTime === null) {
+        pressTimes[i] = frame.time;
+      } else if (!isPressed && pressTime !== null) {
+        pressTimes[i] = null;
+        yield { column: i, start: pressTime, end: frame.time };
+      }
+    }
+  }
+}
+
+function createKeyAction(ctx: Context, action: KeyAction) {
+  const x = action.column * ctx.note.width;
+  const pressY = translateTime(ctx, action.start);
+  const grid = ctx.note.width / 4;
+  const releaseY = translateTime(ctx, action.end);
+
+  const lines = [
+    [x + grid, pressY, x + grid * 3, pressY],
+    [x + grid * 2, pressY, x + grid * 2, releaseY],
+  ]
+
+  const group = new Konva.Group();
+  for (const linePoints of lines) {
+    const line = new Konva.Line({
+      points: linePoints,
+      stroke: ctx.replay.color,
+      strokeWidth: ctx.replay.width,
+    });
+    line.setAttr('getData', () => ({
+      name: 'Key',
+      start: action.start,
+      end: action.end,
+    }));
+    group.add(line);
+  }
+  return group;
+}
+
+function createKeyActions(ctx: Context) {
+  const group = new Konva.Group({
+    x: ctx.scroll.width,
+    y: 0,
+  });
+  if (!ctx.replay.frames) {
+    return group;
+  }
+  for (const action of generateActions(ctx.replay.frames)) {
+    if (action.end < ctx.state.startTime || action.start > ctx.state.endTime) {
+      continue;
+    }
+    group.add(createKeyAction(ctx, action));
   }
   return group;
 }

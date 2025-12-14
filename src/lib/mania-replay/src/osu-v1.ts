@@ -1,8 +1,9 @@
-import type { Beatmap, Note, ReplayFrame, Result } from './types';
+import type { Beatmap, Note, ReplayFrame, HitResult, PlayedNote } from './types';
 import { createQueues, generateActions } from './utils';
 import type { NoteQueue } from './utils';
 
-const accuracy = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0];
+export const accuracy = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0] as const;
+export const levelNames = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'] as const;
 
 export class HitWindows {
   private windows: number[];
@@ -108,39 +109,35 @@ export class Column {
     }
   }
 
-  checkMiss(currentTime: number): Result | null {
+  checkMiss(currentTime: number): PlayedNote | null {
     if (this.isProcessed) return null;
 
     const offset = currentTime - this.slot.start;
     if (this.slot.end) {
       if (!this.lnHeadOffset && this.windows.headMiss(offset)) {
-        const result: Result = {
+        const result = {
           time: currentTime,
           level: this.windows.missLevel,
           offset,
-          note: this.slot,
           acc: 0.0,
         };
-        this.isProcessed = true;
-        return result;
+        return this.finalize(result);
       }
     } else {
       if (this.windows.hitMiss(offset)) {
-        const result: Result = {
+        const result = {
           time: currentTime,
           level: this.windows.missLevel,
           offset,
-          note: this.slot,
           acc: 0.0,
         };
-        this.isProcessed = true;
-        return result;
+        return this.finalize(result);
       }
     }
     return null;
   }
 
-  checkHit(currentTime: number): Result | null {
+  checkHit(currentTime: number): PlayedNote | null {
     if (this.isProcessed) return null;
 
     const offset = currentTime - this.slot.start;
@@ -148,15 +145,13 @@ export class Column {
       const level = this.windows.getHeadLevel(offset);
       if (level !== null) {
         if (level === this.windows.missLevel) {
-          const result: Result = {
+          const result = {
             time: currentTime,
             level,
             offset,
-            note: this.slot,
             acc: 0.0,
           };
-          this.isProcessed = true;
-          return result;
+          return this.finalize(result);
         } else {
           this.lnHeadOffset = offset;
         }
@@ -164,40 +159,41 @@ export class Column {
     } else {
       const level = this.windows.getHitLevel(offset);
       if (level !== null) {
-        const result: Result = {
+        const result = {
           time: currentTime,
           level,
           offset,
-          note: this.slot,
           combo: level < this.windows.missLevel ? 1 : undefined,
           acc: accuracy[level],
         };
-        this.isProcessed = true;
-        return result;
+        return this.finalize(result);
       }
     }
     return null;
   }
 
-  checkRelease(currentTime: number): Result | null {
+  checkRelease(currentTime: number): PlayedNote | null {
     if (this.isProcessed || this.slot.end === undefined || this.lnHeadOffset === null) return null;
 
     const offset = currentTime - this.slot.end;
     const level = this.windows.getReleaseLevel(this.lnHeadOffset, offset);
     if (level !== null) {
-      const result: Result = {
+      const result = {
         time: currentTime,
         level,
         offset: this.lnHeadOffset,
         releaseOffset: offset,
-        note: this.slot,
         combo: level < this.windows.missLevel ? 1 : undefined,
         acc: accuracy[level],
       };
-      this.isProcessed = true;
-      return result;
+      return this.finalize(result);
     }
     return null;
+  }
+
+  private finalize(result: HitResult): PlayedNote {
+    this.isProcessed = true;
+    return { ...this.slot, result };
   }
 }
 
@@ -210,8 +206,8 @@ export class OsuPlayer {
     this.replayFrames = replayFrames;
   }
 
-  play(resolution: 'ms' | 'replay' = 'replay'): Result[] {
-    const results: Result[] = [];
+  play(resolution: 'ms' | 'replay' = 'replay'): PlayedNote[] {
+    const results: PlayedNote[] = [];
     const queues = createQueues(this.beatmap);
     const windows = new HitWindows(this.beatmap.od);
     const columns = queues.map(q => new Column(q, windows));
@@ -229,17 +225,17 @@ export class OsuPlayer {
       for (let c = 0; c < this.beatmap.keys; c++) {
         const col = columns[c];
         const action = frame.actions[c];
-        let result: Result | null = null;
+        let note: PlayedNote | null = null;
         switch (action) {
           case 'press':
-            result = col.checkHit(frame.time);
+            note = col.checkHit(frame.time);
             break;
           case 'release':
-            result = col.checkRelease(frame.time);
+            note = col.checkRelease(frame.time);
             break;
         }
-        if (result) {
-          results.push(result);
+        if (note) {
+          results.push(note);
         }
         col.tryNext(frame.time);
       }

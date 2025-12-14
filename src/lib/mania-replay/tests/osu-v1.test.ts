@@ -9,14 +9,13 @@ async function executeReplay(name: string) {
   const convertedBeatmap = convertBeatmap(beatmap);
   const replay = convertReplay(convertedBeatmap.keys, score.replay!.frames as ManiaReplayFrame[]);
   const player = new OsuPlayer(convertedBeatmap, replay);
-  const results = player.play();
-  return { results, score };
+  const notes = player.play();
+  return { notes, score };
 }
 
 async function runTest(name: string) {
-  const { results, score } = await executeReplay(name);
-
-  const summary = summarize(results);
+  const { notes, score } = await executeReplay(name);
+  const summary = summarize(notes);
   const info = formatScoreInfo(score.info);
 
   expect(summary.totalHits).toBe(info.totalHits);
@@ -25,6 +24,6 @@ async function runTest(name: string) {
   expect.soft(summary.counts).toEqual(info.counts);
 };
 
-test.for(['rice1', 'rice2', 'rice3', 'rice4'])('%s', name => runTest(name));
+test.for(['7kreg7j', '7kreg8st'])('%s', name => runTest(name));
 
 //test.for(['ln1'])('%s', name => runTest(name));

@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Beatmap } from '~/lib/mania-replay/src';
+import type { Beatmap, ReplayFrame } from '~/lib/mania-replay/src';
 import { defaultOptions, resolveOptions } from './options';
 import type { Options } from './options';
 import { UI, PlayField, Tooltip } from './layers';
@@ -42,8 +42,8 @@ export function createPanel(container: HTMLDivElement, optionsOverride?: DeepPar
   const tooltipLayer = new Konva.Layer();
   stage.add(tooltipLayer);
 
-  const render = (beatmap: Beatmap) => {
-    const ctx = resolveOptions(beatmap, options);
+  const render = (beatmap: Beatmap, replay?: ReplayFrame[]) => {
+    const ctx = resolveOptions(options, beatmap, replay);
     stage.width(ctx.stage.width);
     stage.height(ctx.stage.height);
 
@@ -53,7 +53,7 @@ export function createPanel(container: HTMLDivElement, optionsOverride?: DeepPar
     });
     PlayField.render(ctx, playfieldLayer);
     Tooltip.render(ctx, tooltipLayer);
-  }
+  };
 
   return {
     render,

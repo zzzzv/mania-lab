@@ -61,7 +61,11 @@ export function createScrollNps(ctx: Context) {
       height: barHeight - 2,
       fill: ctx.scroll.nps.color,
     });
-    rect.setAttr('getData', () => ({ time: i * 1000, nps: nps[i] }));
+    rect.setAttr('getData', () => ({
+      name: 'NPS',
+      time: i * 1000,
+      nps: nps[i]
+    }));
     group.add(rect);
   }
   return group;
@@ -111,6 +115,7 @@ export function createScrollWindow(ctx: Context) {
     },
   });
   rect.setAttr('getData', () => ({
+    name: 'Window',
     start: Math.round(ctx.state.startTime),
     end: Math.round(ctx.state.endTime),
   }));

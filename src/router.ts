@@ -5,7 +5,8 @@ import SvgView from '~/views/Svg.vue'
 import Panel from '~/views/Panel.vue'
 
 const routes = [
-  { path: '/', component: HomeView },
+  { path: '/', redirect: '/panel' },
+  { path: '/home', component: HomeView },
   { path: '/svg', component: SvgView },
   { path: '/panel', component: Panel },
 ]

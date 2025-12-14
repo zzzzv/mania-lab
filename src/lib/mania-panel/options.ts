@@ -1,10 +1,12 @@
 import Konva from 'konva';
-import type { Beatmap, Note } from '~/lib/mania-replay/src';
+import type { Beatmap, Note, ReplayFrame } from '~/lib/mania-replay/src';
+import { OsuPlayer } from '~/lib/mania-replay/src';
 
 export type noteColorSelector = (keys: number, object: Note) => string;
 export type Element = Konva.Group | Konva.Shape;
 export type elementCreator<T> = (ctx: Context, object: T) => Element;
 export type formatter<T> = (data: T) => string;
+export type KeyAction = Required<Note>
 
 export const defaultOptions = {
   background: {
@@ -26,6 +28,14 @@ export const defaultOptions = {
     selectColor: undefined as noteColorSelector | undefined,
     /** Custom function to create note elements */
     createElement: undefined as elementCreator<Note> | undefined,
+  },
+  replay: {
+    /** Color of the replay cursor */
+    color: '#FF0000', // red
+    /** Width of the replay cursor in px */
+    width: 4,
+    /** Custom function to create replay cursor element */
+    createElement: undefined as elementCreator<KeyAction> | undefined,
   },
   barline: {
     /** Stroke width of bar lines in px */
@@ -88,13 +98,19 @@ export const defaultOptions = {
 
 export type Options = typeof defaultOptions;
 
-export function resolveOptions(beatmap: Beatmap, options: Options) {
+export function resolveOptions(options: Options, beatmap: Beatmap, replay?: ReplayFrame[]) {
   if (options.note.width === 'auto' && options.stage.width === 'auto') {
     throw new Error('Cannot set both note.width and stage.width to "auto"');
   }
 
   const lastEnd = beatmap.notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);
   const beatmapDuration = Math.ceil(lastEnd / 1000) * 1000;
+
+  let notes = beatmap.notes;
+  if (replay) {
+    const player = new OsuPlayer(beatmap, replay);
+    notes = player.play();
+  }
 
   const noteWidth = options.note.width === 'auto'
     ? ((options.stage.width as number) - options.scroll.width - options.axis.width) / beatmap.keys
@@ -123,12 +139,17 @@ export function resolveOptions(beatmap: Beatmap, options: Options) {
   return {
     beatmap: {
       ...beatmap,
+      notes,
       duration: beatmapDuration,
     },
     ...options,
     note: {
       ...options.note,
       width: noteWidth,
+    },
+    replay: {
+      ...options.replay,
+      frames: replay,
     },
     scroll: {
       ...options.scroll,

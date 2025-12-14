@@ -17,8 +17,8 @@ export function render(ctx: Context, layer: Konva.Layer) {
     layer.getStage()?.off('click');
     layer.getStage()?.on('click', (e) => {
       const shape = e.target;
-      if (shape instanceof Konva.Rect && shape.getAttr('getData')) {
-        const data = shape.getAttr('getData')();
+      const data = getData(shape);
+      if (data) {
         const text = ctx.tooltip.format!(data);
         tooltip.getText().text(text);
 
@@ -38,14 +38,37 @@ export function render(ctx: Context, layer: Konva.Layer) {
   }
 }
 
-function formatTooltipText(data: any) {
-  const lines: string[] = [];
-  for (const key in data) {
-    if (data.hasOwnProperty(key) && data[key] !== undefined) {
-      lines.push(`${key}: ${data[key]}`);
-    }
+function getData(shape: any) {
+  if (typeof shape.getAttr === 'function') {
+    const attr = shape.getAttr('getData');
+    if (typeof attr === 'function') return attr();
+    if (attr !== undefined) return attr;
+    return undefined;
   }
-  return lines.join('\n');
+}
+
+function formatTooltipText(data: any): string {
+  const shortNames: Record<string, string> = {
+    releaseOffset: 'release'
+  };
+  const getLines = (obj: any): string[] => {
+    return Object.entries(obj)
+      .filter(([_, value]) => value !== undefined)
+      .reduce<string[]>((lines, [key, value]) => {
+        const shortKey = shortNames[key] || key;
+        if (key === 'name' || key === 'title') {
+          lines.unshift(`${value}`);
+        } else if (typeof value === 'object') {
+          lines.push(`${shortKey}: {`);
+          lines.push(...getLines(value).map(line => `  ${line}`));
+          lines.push(`}`);
+        } else {
+          lines.push(`${shortKey}: ${value}`);
+        }
+        return lines;
+      }, []);
+  }
+  return getLines(data).join('\n');
 }
 
 function createTooltip(_: Context) {
