@@ -25,8 +25,8 @@ export function createBackground(ctx: Context) {
   const bg = new Konva.Rect({
     x: 0,
     y: 0,
-    width: ctx.stage.width,
-    height: ctx.stage.height,
+    width: ctx.canvas.width,
+    height: ctx.canvas.height,
     fill: ctx.background.color,
   });
   return bg;
@@ -47,16 +47,16 @@ function getNps(beatmap: Context['beatmap'], countTails = false) {
 export function createScrollNps(ctx: Context) {
   const nps = getNps(ctx.beatmap, ctx.scroll.nps.countTails);
   const maxNps = Math.max(...nps);
-  const barHeight = ctx.stage.height / nps.length;
+  const barHeight = ctx.canvas.height / nps.length;
   const group = new Konva.Group({
-    x: ctx.scroll.x,
+    x: 0,
     y: 0,
   });
   for (let i = 0; i < nps.length; i++) {
     const barWidth = (nps[i] / maxNps) * ctx.scroll.width;
     const rect = new Konva.Rect({
       x: ctx.scroll.width - barWidth,
-      y: ctx.stage.height - barHeight * (i + 1) + 1,
+      y: ctx.canvas.height - barHeight * (i + 1) + 1,
       width: barWidth,
       height: barHeight - 2,
       fill: ctx.scroll.nps.color,
@@ -73,15 +73,15 @@ export function createScrollNps(ctx: Context) {
 
 function translateState(ctx: Context) {
   const visibleDuration = ctx.state.endTime - ctx.state.startTime;
-  const height = ctx.stage.height * (visibleDuration / ctx.beatmap.duration);
-  const bottomY = ctx.stage.height - (ctx.state.startTime / ctx.beatmap.duration) * ctx.stage.height;
+  const height = ctx.canvas.height * (visibleDuration / ctx.beatmap.duration);
+  const bottomY = ctx.canvas.height - (ctx.state.startTime / ctx.beatmap.duration) * ctx.canvas.height;
   const topY = bottomY - height;
   return { topY, bottomY, height };
 }
 
 function updateState(ctx: Context, topY: number, bottomY: number) {
-  const visibleDuration = ctx.beatmap.duration * (bottomY - topY) / ctx.stage.height;
-  const startTime = ctx.beatmap.duration * (ctx.stage.height - bottomY) / ctx.stage.height;
+  const visibleDuration = ctx.beatmap.duration * (bottomY - topY) / ctx.canvas.height;
+  const startTime = ctx.beatmap.duration * (ctx.canvas.height - bottomY) / ctx.canvas.height;
   ctx.state.startTime = startTime;
   ctx.state.endTime = startTime + visibleDuration;
   ctx.state.onChange.emit();
@@ -89,12 +89,12 @@ function updateState(ctx: Context, topY: number, bottomY: number) {
 
 export function createScrollWindow(ctx: Context) {
   const init = translateState(ctx);
-  const minHeight = ctx.stage.height * (ctx.scroll.window.min / ctx.beatmap.duration);
-  const maxHeight = ctx.stage.height * (ctx.scroll.window.max / ctx.beatmap.duration);
+  const minHeight = ctx.canvas.height * (ctx.scroll.window.min / ctx.beatmap.duration);
+  const maxHeight = ctx.canvas.height * (ctx.scroll.window.max / ctx.beatmap.duration);
   const handleSize = 10;
   
   const group = new Konva.Group({
-    x: ctx.scroll.x,
+    x: 0,
     y: 0,
   });
   
@@ -110,7 +110,7 @@ export function createScrollWindow(ctx: Context) {
     dragBoundFunc: function(pos) {
       return {
         x: this.absolutePosition().x,
-        y: clamp(pos.y, 0, ctx.stage.height - this.height()),
+        y: clamp(pos.y, 0, ctx.canvas.height - this.height()),
       };
     },
   });
@@ -149,7 +149,7 @@ export function createScrollWindow(ctx: Context) {
       const newBottom = clamp(pos.y + handleSize / 2, top + minHeight, top + maxHeight);
       return {
         x: this.absolutePosition().x,
-        y: Math.min(newBottom, ctx.stage.height) - handleSize / 2,
+        y: Math.min(newBottom, ctx.canvas.height) - handleSize / 2,
       };
     },
   });

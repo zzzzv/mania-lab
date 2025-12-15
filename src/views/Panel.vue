@@ -22,22 +22,45 @@ onMounted(() => {
     panel = createPanel(container.value);
     
     watch(
-      () => [stateStore.selectedBeatmapMD5, stateStore.selectedReplayMD5],
-      async ([beatmapMD5, replayMD5]) => {
+      () => stateStore.selectedBeatmapMD5,
+      async (beatmapMD5) => {
         if (!beatmapMD5 || !panel) {
           showEmpty.value = true;
           return;
         }
         showEmpty.value = false;
-        const beatmap = await beatmapStore.readBeatmap(beatmapMD5);
-        const convertedBeatmap = convertBeatmap(beatmap);
-        let convertedReplay;
-        if (replayMD5) {
-          const score = await replayStore.readReplay(replayMD5, beatmap);
-          const frames = score.replay.frames as ManiaReplayFrame[];
-          convertedReplay = convertFrames(convertedBeatmap.keys, frames);
+        const rawBeatmap = await beatmapStore.readBeatmap(beatmapMD5);
+        const beatmap = convertBeatmap(rawBeatmap);
+        panel.setOptions({
+          beatmap: beatmap,
+          replay: { frames: [] },
+        });
+        panel.render();
+      },
+      { immediate: true }
+    );
+
+    watch(
+      () => stateStore.selectedReplayMD5,
+      async (replayMD5) => {
+        if (!replayMD5 || !panel) {
+          showEmpty.value = true;
+          return;
         }
-        panel.render(convertedBeatmap, convertedReplay);
+        showEmpty.value = false;
+        const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
+        const beatmap = convertBeatmap(rawBeatmap);
+        let frames;
+        if (replayMD5) {
+          const score = await replayStore.readReplay(replayMD5, rawBeatmap);
+          const rawFrames = score.replay.frames as ManiaReplayFrame[];
+          frames = convertFrames(beatmap.keys, rawFrames);
+        }
+        panel.setOptions({
+          beatmap: beatmap,
+          replay: { frames },
+        })
+        panel.render();
       },
       { immediate: true }
     );

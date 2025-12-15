@@ -53,12 +53,14 @@ export function render(ctx: Context, layer: Konva.Layer) {
 
   ctx.note.selectColor ??= createNoteColorSelector();
   ctx.note.createElement ??= createNote;
+  ctx.replay.createElement ??= createKeyAction;
   const notes = createNotes(ctx);
   layer.add(notes);
 
-  ctx.replay.createElement ??= createKeyAction;
-  const keyActions = createKeyActions(ctx);
-  layer.add(keyActions);
+  if (ctx.replay.useFrameActions) {
+    const keyActions = createFrameKeyActions(ctx);
+    layer.add(keyActions);
+  }
 
   ctx.axis.createElement ??= createAxisLabel;
   const axisLabels = createAxisLabels(ctx);
@@ -68,8 +70,8 @@ export function render(ctx: Context, layer: Konva.Layer) {
 }
 
 function translateTime(ctx: Context, time: number) {
-  const scale = ctx.stage.height / (ctx.state.endTime - ctx.state.startTime);
-  return ctx.stage.height - (time - ctx.state.startTime) * scale;
+  const scale = ctx.canvas.height / (ctx.state.endTime - ctx.state.startTime);
+  return ctx.canvas.height - (time - ctx.state.startTime) * scale;
 }
 
 function generateBarLinePositions(
@@ -99,7 +101,7 @@ function generateBarLinePositions(
 function createBarLine(ctx: Context, time: number) {
   const y = translateTime(ctx, time);
   const line = new Konva.Line({
-    points: [0, y, ctx.stage.width - ctx.scroll.width - ctx.axis.width, y],
+    points: [0, y, ctx.canvas.width - ctx.scroll.width - ctx.axis.width, y],
     stroke: ctx.barline.color,
     strokeWidth: ctx.barline.strokeWidth,
   });
@@ -164,34 +166,49 @@ function createAxisLabels(ctx: Context) {
 }
 
 function createNote(ctx: Context, note: Note | PlayedNote) {
-  const bottomY = translateTime(ctx, note.start);
-  const topY = note.end ? translateTime(ctx, note.end) : bottomY - ctx.note.height;
-  const height = bottomY - topY;
-  const width = ctx.note.width;
-  const x = note.column * width;
+  const x = note.column * ctx.note.width;
+  const y = translateTime(ctx, note.start);
   const color = ctx.note.selectColor!(ctx.beatmap.keys, note);
 
-  const rect = new Konva.Rect({
+  const group = new Konva.Group();
+  const head = new Konva.Rect({
     x,
-    y: topY,
-    width,
-    height,
+    y: y - ctx.note.height / 2,
+    width: ctx.note.width,
+    height: ctx.note.height,
     fill: color,
     cornerRadius: ctx.note.rx,
   });
-  const result = 'result' in note ? {
-    time: note.result.time,
-    level: levelNames[note.result.level],
-    offset: note.result.offset,
-    release: note.result.releaseOffset,
-  } : undefined;
-  rect.setAttr('getData', () => ({
+  
+  const getData = () => ({
     name: 'Note',
     start: note.start,
     end: note.end,
     result,
-  }));
-  return rect;
+  });
+  head.setAttr('getData', getData);
+  group.add(head);
+
+  if (note.end) {
+    const topY = translateTime(ctx, note.end);
+    const body = new Konva.Rect({
+      x: x + (ctx.note.width - ctx.note.bodyWidth) / 2,
+      y: topY,
+      width: ctx.note.bodyWidth,
+      height: y - topY - ctx.note.height / 2,
+      fill: ctx.note.bodyColor ?? color,
+    });
+    group.add(body);
+    body.setAttr('getData', getData);
+  }
+
+  const result = 'result' in note ? {
+    level: levelNames[note.result.level],
+    offset: note.result.offset,
+    release: note.result.releaseOffset,
+  } : undefined;
+
+  return group;
 }
 
 function createNotes(ctx: Context) {
@@ -199,19 +216,31 @@ function createNotes(ctx: Context) {
     x: ctx.scroll.width,
     y: 0,
   });
-  const noteHeightTimeOffset = (ctx.note.height / ctx.stage.height) * (ctx.state.endTime - ctx.state.startTime);
+  const noteHeightTimeOffset = (ctx.note.height / ctx.canvas.height) * (ctx.state.endTime - ctx.state.startTime);
   for (const note of ctx.beatmap.notes) {
     const end = note.end ?? note.start + noteHeightTimeOffset;
     if (note.start > ctx.state.endTime || end < ctx.state.startTime) {
       continue;
     }
-    const noteShape = createNote(ctx, note);
-    group.add(noteShape);
+    const noteGroup = new Konva.Group();
+    noteGroup.add(createNote(ctx, note));
+    if ('result' in note && !ctx.replay.useFrameActions) {
+      const playedNote = note as PlayedNote;
+      const action = {
+        column: note.column,
+        start: playedNote.start + playedNote.result.offset,
+        end: (playedNote.end !== undefined && playedNote.result?.releaseOffset !== undefined)
+          ? playedNote.end + playedNote.result.releaseOffset
+          : undefined,
+      };
+      noteGroup.add(createKeyAction(ctx, action));
+    }
+    group.add(noteGroup);
   }
   return group;
 }
 
-function *generateActions(replay: ReplayFrame[]) {
+function *generateActionsFromFrame(replay: ReplayFrame[]): Generator<KeyAction> {
   const keys = replay[0].keyStates.length;
   const pressTimes: (number | null)[] = Array.from({ length: keys }, () => null);
 
@@ -233,12 +262,13 @@ function createKeyAction(ctx: Context, action: KeyAction) {
   const x = action.column * ctx.note.width;
   const pressY = translateTime(ctx, action.start);
   const grid = ctx.note.width / 4;
-  const releaseY = translateTime(ctx, action.end);
+  
 
-  const lines = [
-    [x + grid, pressY, x + grid * 3, pressY],
-    [x + grid * 2, pressY, x + grid * 2, releaseY],
-  ]
+  const lines = [[x + grid, pressY, x + grid * 3, pressY]];
+  if (action.end) {
+    const releaseY = translateTime(ctx, action.end);
+    lines.push([x + grid * 2, pressY, x + grid * 2, releaseY]);
+  }
 
   const group = new Konva.Group();
   for (const linePoints of lines) {
@@ -257,16 +287,17 @@ function createKeyAction(ctx: Context, action: KeyAction) {
   return group;
 }
 
-function createKeyActions(ctx: Context) {
+function createFrameKeyActions(ctx: Context) {
   const group = new Konva.Group({
     x: ctx.scroll.width,
     y: 0,
   });
-  if (!ctx.replay.frames) {
+  if (ctx.replay.frames.length === 0) {
     return group;
   }
-  for (const action of generateActions(ctx.replay.frames)) {
-    if (action.end < ctx.state.startTime || action.start > ctx.state.endTime) {
+  for (const action of generateActionsFromFrame(ctx.replay.frames)) {
+    const end = action.end ?? action.start;
+    if (end < ctx.state.startTime || action.start > ctx.state.endTime) {
       continue;
     }
     group.add(createKeyAction(ctx, action));

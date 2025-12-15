@@ -26,4 +26,4 @@ async function runTest(name: string) {
 
 test.for(['7kreg7j', '7kreg8st'])('%s', name => runTest(name));
 
-//test.for(['ln1'])('%s', name => runTest(name));
+test.for(['7kln9g'])('%s', name => runTest(name));

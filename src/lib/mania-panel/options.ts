@@ -1,163 +1,169 @@
 import Konva from 'konva';
-import type { Beatmap, Note, ReplayFrame } from '~/lib/mania-replay/src';
+import type { Note, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
 import { OsuPlayer } from '~/lib/mania-replay/src';
+import { createEvent } from '../mania-panel/utils';
 
 export type noteColorSelector = (keys: number, object: Note) => string;
 export type Element = Konva.Group | Konva.Shape;
 export type elementCreator<T> = (ctx: Context, object: T) => Element;
 export type formatter<T> = (data: T) => string;
-export type KeyAction = Required<Note>
+export type KeyAction = Note
 
-export const defaultOptions = {
-  background: {
-    /** Whether to render background */
-    enabled: true,
-    /** Background color */
-    color: '#000000', // black
-    /** Custom function to create background element */
-    createElement: undefined as elementCreator<void> | undefined,
-  },
-  note: {
-    /** Width of each column in px */
-    width: 40 as 'auto' | number,
-    /** Height of regular notes in px */
-    height: 12,
-    /** Corner radius in px */
-    rx: 2,
-    /** Custom function to select note colors */
-    selectColor: undefined as noteColorSelector | undefined,
-    /** Custom function to create note elements */
-    createElement: undefined as elementCreator<Note> | undefined,
-  },
-  replay: {
-    /** Color of the replay cursor */
-    color: '#FF0000', // red
-    /** Width of the replay cursor in px */
-    width: 4,
-    /** Custom function to create replay cursor element */
-    createElement: undefined as elementCreator<KeyAction> | undefined,
-  },
-  barline: {
-    /** Stroke width of bar lines in px */
-    strokeWidth: 1,
-    /** Color of the bar lines */
-    color: '#85F000', // green
-    /** Custom function to create bar line elements */
-    createElement: undefined as elementCreator<number> | undefined,
-  },
-  axis: {
-    /** Width of the axis area in px */
-    width: 30,
-    /** Style for labels at whole minutes (e.g., 1:00, 2:00) */
-    minute: {
-      color: '#FF3F00',
-      strokeWidth: 2,
-      fontSize: 18,
+export function createDefaultOptions() {
+  return {
+    canvas: {
+      /** Total width of the canvas in px */
+      width: 'auto' as 'auto' | number,
+      /** Total height of the canvas in px */
+      height: 930,
     },
-    /** Style for second labels */
-    second: {
-      color: '#FFFFFF',
-      strokeWidth: 1,
-      fontSize: 18,
-    },
-    /** Custom function to create axis elements */
-    createElement: undefined as elementCreator<number> | undefined,
-  },
-  scroll: {
-    /** Width of the scrollbar in px */
-    width: 80,
-    /** Time window for the scrollbar in milliseconds */
-    window: {
-      min: 2000, // ms
-      max: 10000, // ms
-      default: 5000, // ms
-    },
-    /** NPS (notes-per-second) histogram rendered as the scrollbar background */
-    nps: {
-      /** Whether to count note tails in NPS calculation */
-      countTails: true,
-      /** Color of the NPS bars */
-      color: '#FF99CC',
-      /** Custom function to create scrollbar background elements */
+    background: {
+      /** Whether to render background */
+      enabled: true,
+      /** Background color */
+      color: '#000000', // black
+      /** Custom function to create background element */
       createElement: undefined as elementCreator<void> | undefined,
     },
-  },
-  tooltip: {
-    /** Whether to show tooltips on notes */
-    enabled: true,
-    /** Custom function to format tooltip text */
-    format: undefined as formatter<any> | undefined,
-  },
-  stage: {
-    /** Width of the stage in px */
-    width: 'auto' as 'auto' | number,
-    /** Height of the stage in px */
-    height: 930,
-  }
+    beatmap: {
+      /** Number of columns (keys) */
+      keys: 7,
+      /** Overall Difficulty */
+      od: 8,
+      /** Duration of the beatmap in milliseconds */
+      duration: 'auto' as 'auto' | number,
+      /** Note objects */
+      notes: [] as Note[],
+      /** Timing points */
+      timingPoints: [] as TimingPoint[],
+    },
+    note: {
+      /** Width of each column in px */
+      width: 40 as 'auto' | number,
+      /** Height of regular notes in px */
+      height: 12,
+      /** Corner radius in px */
+      rx: 2,
+      /** Width of long note body in px */
+      bodyWidth: 20,
+      /** Color of the long note body */
+      bodyColor: '#CCCCCC' as string | undefined,
+      /** Custom function to select note colors */
+      selectColor: undefined as noteColorSelector | undefined,
+      /** Custom function to create note elements */
+      createElement: undefined as elementCreator<Note> | undefined,
+    },
+    replay: {
+      /** Color of the replay cursor */
+      color: '#FF0000', // red
+      /** Width of the replay cursor in px */
+      width: 4,
+      /** Replay frames */
+      frames: [] as ReplayFrame[],
+      /** Render key action from replay frames rather than notes result */
+      useFrameActions: false,
+      /** Custom function to create replay cursor element */
+      createElement: undefined as elementCreator<KeyAction> | undefined,
+    },
+    barline: {
+      /** Stroke width of bar lines in px */
+      strokeWidth: 1,
+      /** Color of the bar lines */
+      color: '#85F000', // green
+      /** Custom function to create bar line elements */
+      createElement: undefined as elementCreator<number> | undefined,
+    },
+    axis: {
+      /** Width of the axis area in px */
+      width: 30,
+      /** Style for labels at whole minutes (e.g., 1:00, 2:00) */
+      minute: {
+        color: '#FF3F00',
+        strokeWidth: 2,
+        fontSize: 18,
+      },
+      /** Style for second labels */
+      second: {
+        color: '#FFFFFF',
+        strokeWidth: 1,
+        fontSize: 18,
+      },
+      /** Custom function to create axis elements */
+      createElement: undefined as elementCreator<number> | undefined,
+    },
+    scroll: {
+      /** Width of the scrollbar in px */
+      width: 80,
+      /** Time window for the scrollbar in milliseconds */
+      window: {
+        min: 2000, // ms
+        max: 20000, // ms
+        default: 5000, // ms
+      },
+      /** NPS (notes-per-second) histogram rendered as the scrollbar background */
+      nps: {
+        /** Whether to count note tails in NPS calculation */
+        countTails: true,
+        /** Color of the NPS bars */
+        color: '#FF99CC',
+        /** Custom function to create scrollbar background elements */
+        createElement: undefined as elementCreator<void> | undefined,
+      },
+    },
+    tooltip: {
+      /** Whether to show tooltips on notes */
+      enabled: true,
+      /** Custom function to format tooltip text */
+      format: undefined as formatter<any> | undefined,
+    },
+  };
 }
 
-export type Options = typeof defaultOptions;
+export type Options = ReturnType<typeof createDefaultOptions>;
 
-export function resolveOptions(options: Options, beatmap: Beatmap, replay?: ReplayFrame[]) {
-  if (options.note.width === 'auto' && options.stage.width === 'auto') {
+export function resolveOptions(options: Options) {
+  if (options.note.width === 'auto' && options.canvas.width === 'auto') {
     throw new Error('Cannot set both note.width and stage.width to "auto"');
   }
+  let notes = options.beatmap.notes;
+  let duration = 60000;
+  if (notes.length > 0) {
+    const lastEnd = notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);
+    duration = Math.ceil(lastEnd / 1000) * 1000;
 
-  const lastEnd = beatmap.notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);
-  const beatmapDuration = Math.ceil(lastEnd / 1000) * 1000;
-
-  let notes = beatmap.notes;
-  if (replay) {
-    const player = new OsuPlayer(beatmap, replay);
-    notes = player.play();
+    if (options.replay.frames.length > 0) {
+      const player = new OsuPlayer(options.beatmap, options.replay.frames);
+      notes = player.play();
+    }
   }
 
   const noteWidth = options.note.width === 'auto'
-    ? ((options.stage.width as number) - options.scroll.width - options.axis.width) / beatmap.keys
+    ? ((options.canvas.width as number) - options.scroll.width - options.axis.width) / options.beatmap.keys
     : options.note.width;
-  const stageWidth = options.stage.width === 'auto'
-    ? beatmap.keys * (options.note.width as number) + options.scroll.width + options.axis.width
-    : options.stage.width;
-
-  const listeners: Array<() => void> = [];
+  const stageWidth = options.canvas.width === 'auto'
+    ? options.beatmap.keys * (options.note.width as number) + options.scroll.width + options.axis.width
+    : options.canvas.width;
 
   const state = {
     startTime: 0,
     endTime: options.scroll.window.default,
-    onChange: {
-      emit: () => listeners.forEach(fn => fn()),
-      subscribe: (fn: () => void) => {
-        listeners.push(fn);
-        return () => {
-          const idx = listeners.indexOf(fn);
-          if (idx >= 0) listeners.splice(idx, 1);
-        };
-      },
-    },
+    onChange: createEvent(),
   }
   
   return {
-    beatmap: {
-      ...beatmap,
-      notes,
-      duration: beatmapDuration,
-    },
     ...options,
+    canvas: {
+      ...options.canvas,
+      width: stageWidth,
+    },
+    beatmap: {
+      ...options.beatmap,
+      notes,
+      duration: duration,
+    },
     note: {
       ...options.note,
       width: noteWidth,
-    },
-    replay: {
-      ...options.replay,
-      frames: replay,
-    },
-    scroll: {
-      ...options.scroll,
-      x: scrollX,
-    },
-    stage: {
-      ...options.stage,
-      width: stageWidth,
     },
     state,
   }
