@@ -1,40 +1,58 @@
 <template>
-  <div>
-    <span>Repository: </span>
-    <a href="https://github.com/zzzzv/mania-svg" target="_blank" rel="noopener noreferrer">https://github.com/zzzzv/mania-svg</a>
-  </div>
-  <div v-html="svg">
-    
-  </div>
-  <el-empty v-if="!svg" description="Select a beatmap to view" />
+  <el-container>
+    <template v-if="svg">
+      <div v-html="svg"></div>
+      <options-editor class="editor" :template="template" v-on:update="updateOptions" />
+    </template>
+    <el-empty v-else description="Select a beatmap to view" />
+  </el-container>
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
-import { render, type Beatmap } from 'mania-svg';
+import { ref, watch } from 'vue';
+import { render } from 'mania-svg';
 import { useBeatmapStore, useStateStore } from '~/stores';
 import { convertBeatmap } from '~/utils/convert';
+import OptionsEditor from '~/components/OptionsEditor.vue';
+import optionsTemplate from '~/templates/svg-options.json5?raw';
 
 const beatmapStore = useBeatmapStore();
 const stateStore = useStateStore();
 const svg = ref<string>('');
+const template = optionsTemplate; // avoid build error
+let data: ReturnType<typeof convertBeatmap> | null = null;
+let options = {};
 
-watchEffect(async () => {
-  const beatmapMD5 = stateStore.selectedBeatmapMD5;
-  if (!beatmapMD5) {
+const renderSVG = () => {
+  if (data) {
+    svg.value = render(data, options as any);
+  } else {
     svg.value = '';
-    return;
   }
+};
 
-  const beatmap = await beatmapStore.readBeatmap(beatmapMD5);
-  const data = convertBeatmap(beatmap);
-  const svgData: Beatmap = { ...data, objects: data.notes };
+const updateOptions = (newOptions: object) => {
+  options = newOptions;
+  renderSVG();
+};
 
-  svg.value = render(svgData, {
-    strip: {
-      mode: 'num',
-      num: 8,
-    },
-  });
-});
+watch(
+  () => stateStore.selectedBeatmapMD5,
+  async (beatmapMD5) => {
+    if (beatmapMD5) {
+      const beatmap = await beatmapStore.readBeatmap(beatmapMD5);
+      data = convertBeatmap(beatmap);
+    } else {
+      data = null;
+    }
+    renderSVG();
+  },
+  { immediate: true }
+);
 </script>
+
+<style scoped>
+.el-empty {
+  flex: 1;
+}
+</style>

@@ -1,0 +1,89 @@
+{
+  canvas: {
+    /** Total width of the canvas in px */
+    // width: 'auto' as 'auto' | number,
+    /** Total height of the canvas in px */
+    // height: 930,
+  },
+  background: {
+    /** Whether to render background */
+    // enabled: true,
+    /** Background color */
+    // color: '#000000', // black
+  },
+  beatmap: {
+    /** Number of columns (keys) */
+    // keys: 7,
+    /** Overall Difficulty */
+    // od: 8,
+    /** Duration of the beatmap in milliseconds */
+    // duration: 'auto' as 'auto' | number,
+  },
+  note: {
+    /** Width of each column in px */
+    // width: 40 as 'auto' | number,
+    /** Height of regular notes in px */
+    // height: 12,
+    /** Corner radius in px */
+    // rx: 2,
+    /** Width of long note body in px */
+    // bodyWidth: 20,
+    /** Color of the long note body */
+    // bodyColor: '#CCCCCC' as string | undefined,
+  },
+  replay: {
+    /** Color of the replay cursor */
+    // color: '#FF0000', // red
+    /** Width of the replay cursor in px */
+    // width: 4,
+    /** Replay frames */
+    // frames: [] as ReplayFrame[],
+    /** Levels to render from note results */
+    // selectLevels: [0, 1, 2, 3, 4, 5],
+    /** Render key action from replay frames rather than notes result */
+    // useFrameActions: false,
+  },
+  barline: {
+    /** Stroke width of bar lines in px */
+    // strokeWidth: 1,
+    /** Color of the bar lines */
+    // color: '#85F000', // green
+  },
+  axis: {
+    /** Width of the axis area in px */
+    // width: 30,
+    /** Style for labels at whole minutes (e.g., 1:00, 2:00) */
+    minute: {
+      // color: '#FF3F00',
+      // strokeWidth: 2,
+      // fontSize: 18,
+    },
+    /** Style for second labels */
+    second: {
+      // color: '#FFFFFF',
+      // strokeWidth: 1,
+      // fontSize: 18,
+    },
+  },
+  scroll: {
+    /** Width of the scrollbar in px */
+    // width: 80,
+    /** Time window for the scrollbar in milliseconds */
+    window: {
+      // min: 2000, // ms
+      // max: 20000, // ms
+      // default: 5000, // ms
+    },
+    /** NPS (notes-per-second) histogram rendered as the scrollbar background */
+    nps: {
+      /** Whether to count note tails in NPS calculation */
+      // countTails: true,
+      /** Color of the NPS bars */
+      // color: '#FF99CC',
+    },
+  },
+  tooltip: {
+    /** Whether to show tooltips on notes */
+    // enabled: true,
+  },
+}

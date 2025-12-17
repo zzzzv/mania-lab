@@ -233,7 +233,9 @@ function createNotes(ctx: Context) {
           ? playedNote.end + playedNote.result.releaseOffset
           : undefined,
       };
-      noteGroup.add(createKeyAction(ctx, action));
+      if (ctx.replay.selectLevels.includes(playedNote.result.level)) {
+        noteGroup.add(createKeyAction(ctx, action));
+      }
     }
     group.add(noteGroup);
   }

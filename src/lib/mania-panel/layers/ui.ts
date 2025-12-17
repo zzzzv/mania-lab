@@ -48,6 +48,7 @@ export function createScrollNps(ctx: Context) {
   const nps = getNps(ctx.beatmap, ctx.scroll.nps.countTails);
   const maxNps = Math.max(...nps);
   const barHeight = ctx.canvas.height / nps.length;
+  const barSpacing = Math.min(2, barHeight / 8);
   const group = new Konva.Group({
     x: 0,
     y: 0,
@@ -56,9 +57,9 @@ export function createScrollNps(ctx: Context) {
     const barWidth = (nps[i] / maxNps) * ctx.scroll.width;
     const rect = new Konva.Rect({
       x: ctx.scroll.width - barWidth,
-      y: ctx.canvas.height - barHeight * (i + 1) + 1,
+      y: ctx.canvas.height - barHeight * (i + 1) + barSpacing / 2,
       width: barWidth,
-      height: barHeight - 2,
+      height: barHeight - barSpacing,
       fill: ctx.scroll.nps.color,
     });
     rect.setAttr('getData', () => ({

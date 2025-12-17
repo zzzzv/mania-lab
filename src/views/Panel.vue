@@ -1,6 +1,18 @@
 <template>
-  <div ref="container"></div>
-  <el-empty v-if="showEmpty" description="Select a beatmap or replay to view" />
+  <el-container>
+    <div ref="panelContainer"></div>
+    <template v-if="stateStore.selectedBeatmapMD5">
+      <el-tabs type="border-card">
+        <el-tab-pane label="Options">
+          <options-editor :template="template" v-on:update="updateOptions"/>
+        </el-tab-pane>
+        <el-tab-pane label="Stats">
+          Stats
+        </el-tab-pane>
+      </el-tabs>
+    </template>
+    <el-empty v-else description="Select a beatmap or replay to view" />
+  </el-container>
 </template>
 
 <script setup lang="ts">
@@ -9,26 +21,51 @@ import { onMounted, ref, watch } from 'vue';
 import { createPanel } from '~/lib/mania-panel';
 import { useBeatmapStore, useReplayStore, useStateStore } from '~/stores';
 import { convertBeatmap, convertFrames } from '~/utils/convert';
+import OptionsEditor from '~/components/OptionsEditor.vue';
+import optionsTemplate from '~/templates/panel-options.json5?raw';
 
-const container = ref<HTMLDivElement | null>(null);
-const showEmpty = ref(true);
+const panelContainer = ref<HTMLDivElement | null>(null);
 let panel: ReturnType<typeof createPanel> | null = null;
 const beatmapStore = useBeatmapStore();
 const replayStore = useReplayStore();
 const stateStore = useStateStore();
+const template = optionsTemplate; // avoid build error
+
+const updateOptions = (newOptions: object) => {
+  if (panel) {
+    panel.setOptions(newOptions);
+    panel.render();
+  }
+};
 
 onMounted(() => {
-  if (container.value) {
-    panel = createPanel(container.value);
+  if (panelContainer.value) {
+    const containerHeight = panelContainer.value.clientHeight;
+    panel = createPanel(panelContainer.value);
+    panel.setOptions({
+      canvas: {
+        height: containerHeight,
+      },
+    });
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (panel && panelContainer.value && stateStore.selectedBeatmapMD5) {
+        panel.setOptions({
+          canvas: {
+            height: panelContainer.value.clientHeight,
+          },
+        });
+        panel.render();
+      }
+    });
+    resizeObserver.observe(panelContainer.value);
     
     watch(
       () => stateStore.selectedBeatmapMD5,
       async (beatmapMD5) => {
         if (!beatmapMD5 || !panel) {
-          showEmpty.value = true;
           return;
         }
-        showEmpty.value = false;
         const rawBeatmap = await beatmapStore.readBeatmap(beatmapMD5);
         const beatmap = convertBeatmap(rawBeatmap);
         panel.setOptions({
@@ -44,10 +81,8 @@ onMounted(() => {
       () => stateStore.selectedReplayMD5,
       async (replayMD5) => {
         if (!replayMD5 || !panel) {
-          showEmpty.value = true;
           return;
         }
-        showEmpty.value = false;
         const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
         const beatmap = convertBeatmap(rawBeatmap);
         let frames;
@@ -58,7 +93,9 @@ onMounted(() => {
         }
         panel.setOptions({
           beatmap: beatmap,
-          replay: { frames },
+          replay: {
+            frames,
+          },
         })
         panel.render();
       },
@@ -67,3 +104,28 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.el-container {
+  height: 100%;
+}
+
+.el-tabs {
+  flex: 1;
+}
+
+:deep(.el-tabs__content) {
+  display: flex;
+  padding: 5px;
+}
+
+.el-tab-pane {
+  flex: 1;
+  overflow: auto;
+}
+
+.el-empty {
+  flex: 1;
+}
+
+</style>

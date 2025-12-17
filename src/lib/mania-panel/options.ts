@@ -60,6 +60,8 @@ export function createDefaultOptions() {
       width: 4,
       /** Replay frames */
       frames: [] as ReplayFrame[],
+      /** Levels to render from note results */
+      selectLevels: [0, 1, 2, 3, 4, 5],
       /** Render key action from replay frames rather than notes result */
       useFrameActions: false,
       /** Custom function to create replay cursor element */

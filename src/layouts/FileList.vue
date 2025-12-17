@@ -4,9 +4,9 @@
       <div class="card-header">
         <span>Files</span>
         <el-button
-          style="float: right; padding: 3px 0"
+          style="float: right"
           type="text"
-          @click="beatmapStore.clearAll()"
+          @click="clearAll"
         >
           Clear All
         </el-button>
@@ -114,6 +114,13 @@ function remove(_: TreeNode, data: NodeData) {
     }
     replayStore.removeReplay(data.key);
   }
+}
+
+function clearAll() {
+  stateStore.selectedBeatmapMD5 = null;
+  stateStore.selectedReplayMD5 = null;
+  beatmapStore.clearAll();
+  replayStore.clearAll();
 }
 
 </script>

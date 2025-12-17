@@ -6,15 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:options": "node scripts/generate-options-template.js"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.4",
     "@element-plus/icons-vue": "^2.3.2",
+    "codemirror": "^6.0.2",
     "element-plus": "^2.12.0",
     "idb-keyval": "^6.2.2",
     "js-md5": "^0.8.3",
+    "json5": "^2.2.3",
     "konva": "^10.0.12",
-    "mania-svg": "^0.4.2",
+    "mania-svg": "^0.4.4",
     "osu-classes": "^3.2.0-beta.0",
     "osu-mania-stable": "^5.0.1",
     "osu-parsers": "^4.2.0-beta.0",
