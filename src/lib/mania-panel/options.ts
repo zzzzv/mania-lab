@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import type { Note, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
-import { OsuPlayer } from '~/lib/mania-replay/src';
+import { osuV1, type PlayedNote } from '~/lib/mania-replay/src';
 import { createEvent } from '../mania-panel/utils';
 
 export type noteColorSelector = (keys: number, object: Note) => string;
@@ -127,15 +127,14 @@ export function resolveOptions(options: Options) {
   if (options.note.width === 'auto' && options.canvas.width === 'auto') {
     throw new Error('Cannot set both note.width and stage.width to "auto"');
   }
-  let notes = options.beatmap.notes;
+  let notes: Note[] | PlayedNote[] = options.beatmap.notes;
   let duration = 60000;
   if (notes.length > 0) {
     const lastEnd = notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);
     duration = Math.ceil(lastEnd / 1000) * 1000;
 
     if (options.replay.frames.length > 0) {
-      const player = new OsuPlayer(options.beatmap, options.replay.frames);
-      notes = player.play();
+      notes = osuV1.play(options.beatmap, options.replay.frames);
     }
   }
 

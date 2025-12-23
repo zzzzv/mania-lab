@@ -1,245 +1,174 @@
-import type { Beatmap, Note, ReplayFrame, HitResult, PlayedNote } from './types';
+import type { Beatmap, Note, ReplayFrame, PlayedNote } from './types';
 import { createQueues, generateActions } from './utils';
-import type { NoteQueue } from './utils';
+import type { NoteQueue, Action } from './utils';
 
-export const accuracy = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0] as const;
+export const levelAccuracies = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0] as const;
 export const levelNames = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'] as const;
 
-export class HitWindows {
-  private windows: number[];
-  private lnWindows: number[];
+function createWindows(od: number, mod: 'nm'|'ez'|'hr' = 'nm'): number[] {
+  const baseWindows = [
+    16,
+    64 - 3 * od,
+    97 - 3 * od,
+    127 - 3 * od,
+    151 - 3 * od,
+    188 - 3 * od,
+  ];
+  const modFactor = mod === 'ez' ? 1.4 : mod === 'hr' ? 1/1.4 : 1.0;
+  return baseWindows.map(w => w * modFactor);
+};
 
-  constructor(od: number, mod: 'nm'|'ez'|'hr' = 'nm') {
-    const createWindows = (): number[] => {
-      const baseWindows = [
-        16,
-        64 - 3 * od,
-        97 - 3 * od,
-        127 - 3 * od,
-        151 - 3 * od,
-        188 - 3 * od,
-      ];
-      const modFactor = mod === 'ez' ? 1.4 : mod === 'hr' ? 1/1.4 : 1.0;
-      return baseWindows.map(w => w * modFactor);
-    };
-    this.windows = createWindows();
-    this.lnWindows = createWindows();
-    this.lnWindows[0] *= 1.2;
-    this.lnWindows[1] *= 1.1;
+function toLNWindows(windows: Readonly<number[]>) {
+  return windows.map((w, i) => i === 0 ? w * 1.2 : i === 1 ? w * 1.1 : w);
+};
+
+function getLevel(offset: number, windows: Readonly<number[]>) {
+  for (let i = 0; i < 3; i++) {
+    if (offset >= -windows[i] && offset <= windows[i]) {
+      return i;
+    }
   }
+  for (let i = 3; i < windows.length; i++) {
+    if (offset >= -windows[i] && offset <= windows[3] - 1) {
+      return i;
+    }
+  }
+  return null;
+};
 
-  getHitLevel(offset: number): number | null {
-    for (let i = 0; i < 3; i++) {
-      if (offset >= -this.windows[i] && offset <= this.windows[i]) {
-        return i;
+function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) {
+  const playedNote: PlayedNote = {
+    ...note,
+    level: -1,
+    actions: [] as number[],
+  };
+  const windows = note.end === undefined ? baseWindows : toLNWindows(baseWindows);
+  let isProcessed = false;
+  let dropped = false;
+  let headTime: number | null = null;
+
+  const onFrame = (time: number) => {
+    if (isProcessed) return;
+
+    isProcessed = note.end === undefined ?
+      time > note.start + windows[3] - 1 :
+      headTime === null && (
+        (playedNote.actions.length > 0 && time > note.end + windows[3] - 1) ||
+        (playedNote.actions.length === 0 && time > note.start + windows[3] - 1)
+      );
+    if (isProcessed) {
+      if (playedNote.level < 0) {
+        playedNote.level = 5;
       }
+      return playedNote;
     }
-    for (let i = 3; i < this.windows.length; i++) {
-      if (offset >= -this.windows[i] && offset <= this.windows[3] - 1) {
-        return i;
+  };
+
+  const onHit = (time: number) => {
+    if (isProcessed) return;
+    
+    if (note.end === undefined) {
+      let level = getLevel(time - note.start, windows);
+      if (level !== null) {
+        isProcessed = true;
+        playedNote.level = level;
+        playedNote.actions.push(time);
+        return playedNote;
       }
+    } else if (time >= note.start - windows[5] && time <= note.end + windows[3] - 1) {
+      headTime = time < note.start - windows[4] ? note.end - 1 : time;
+      playedNote.actions.push(time);
     }
-    return null;
-  }
+  };
 
-  hitMiss(offset: number): boolean {
-    return offset > this.windows[3] - 1;
-  }
+  const _getLNLevel = (tailOffset: number) => {
+    if (tailOffset < -windows[4]) return 5;
 
-  getHeadLevel(offset: number): number | null {
-    for (let i = 0; i < 3; i++) {
-      if (offset >= -this.lnWindows[i] && offset <= this.lnWindows[i]) {
-        return i;
-      }
-    }
-    for (let i = 3; i < this.lnWindows.length; i++) {
-      if (offset >= -this.lnWindows[i] && offset <= this.lnWindows[3] - 1) {
-        return i;
-      }
-    }
-    return null;
-  }
+    const headLevel = getLevel(headTime! - note.start, windows) ?? 4;
+    const meanOffset = (Math.abs(headTime! - note.start) + Math.abs(tailOffset)) / 2;
+    const level = getLevel(meanOffset, windows) ?? 4;
+    return Math.max(headLevel, level, dropped ? 2 : 0);
+  };
 
-  headMiss(offset: number): boolean {
-    return offset > this.lnWindows[3] - 1;
-  }
+  const onRelease = (time: number) => {
+    if (note.end === undefined || isProcessed || headTime === null) return;
 
-  getReleaseLevel(headOffset: number, tailOffset: number): number | null {
-    if (tailOffset < -this.lnWindows[4]) {
-      return this.missLevel;
+    const offset = time - note.end;
+    if (offset < -windows[4]) {
+      playedNote.level = _getLNLevel(offset);
+      playedNote.actions.push(time);
+      dropped = true;
+      headTime = null;
+      return;
     }
 
-    tailOffset = Math.min(tailOffset, this.lnWindows[4]);
-    const meanOffset = (Math.abs(headOffset) + Math.abs(tailOffset)) / 2;
-    if (meanOffset > this.lnWindows[this.missLevel]) {
-      return this.missLevel;
-    }
+    isProcessed = true;
+    const level = _getLNLevel(offset);
+    playedNote.level = level;
+    playedNote.actions.push(time);
+    return playedNote;
+  };
 
-    for (let i = 0; i < this.lnWindows.length; i++) {
-      if (headOffset >= -this.lnWindows[i] && headOffset <= this.lnWindows[i] &&
-          meanOffset <= this.lnWindows[i]) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-  get missLevel(): number {
-    return this.windows.length - 1;
-  }
+  return { note, get isProcessed() { return isProcessed; }, onFrame, onHit, onRelease };
 }
 
-export class Column {
-  private queue: NoteQueue;
-  private slot: Note = {column: 0, start: 0};
-  private isProcessed: boolean = true;
-  private lnHeadOffset: number | null = null;
-  private windows: HitWindows;
+type Judgement = ReturnType<typeof createJudgement>;
 
-  constructor(queue: NoteQueue, windows: HitWindows) {
-    this.queue = queue;
-    this.windows = windows;
-  }
+function createColumn(queue: NoteQueue, windows: number[]) {
+  let current: Judgement | null = null;
 
-  tryNext(currentTime: number): void {
-    if (this.isProcessed && currentTime >= this.slot.start && this.queue.peek()) {
-      this.slot = this.queue.pop()!;
-      this.isProcessed = false;
-      this.lnHeadOffset = null;
-    }
-  }
-
-  checkMiss(currentTime: number): PlayedNote | null {
-    if (this.isProcessed) return null;
-
-    const offset = currentTime - this.slot.start;
-    if (this.slot.end) {
-      if (!this.lnHeadOffset && this.windows.headMiss(offset)) {
-        const result = {
-          time: currentTime,
-          level: this.windows.missLevel,
-          offset,
-          acc: 0.0,
-        };
-        return this.finalize(result);
-      }
-    } else {
-      if (this.windows.hitMiss(offset)) {
-        const result = {
-          time: currentTime,
-          level: this.windows.missLevel,
-          offset,
-          acc: 0.0,
-        };
-        return this.finalize(result);
+  const next = (time: number) => {
+    if (current === null || (current.isProcessed && time >= current.note.start)) {
+      const nextNote = queue.pop();
+      if (nextNote) {
+        current = createJudgement(nextNote, windows);
       }
     }
-    return null;
-  }
+  };
 
-  checkHit(currentTime: number): PlayedNote | null {
-    if (this.isProcessed) return null;
+  const onFrame = (time: number) => {
+    next(time);
+    if (current) {
+      return current.onFrame(time);
+    }
+  };
 
-    const offset = currentTime - this.slot.start;
-    if (this.slot.end) {
-      const level = this.windows.getHeadLevel(offset);
-      if (level !== null) {
-        if (level === this.windows.missLevel) {
-          const result = {
-            time: currentTime,
-            level,
-            offset,
-            acc: 0.0,
-          };
-          return this.finalize(result);
-        } else {
-          this.lnHeadOffset = offset;
-        }
-      }
-    } else {
-      const level = this.windows.getHitLevel(offset);
-      if (level !== null) {
-        const result = {
-          time: currentTime,
-          level,
-          offset,
-          combo: level < this.windows.missLevel ? 1 : undefined,
-          acc: accuracy[level],
-        };
-        return this.finalize(result);
+  const onAction = (time: number, action: Action) => {
+    next(time);
+    if (current) {
+      if (action === 'press') {
+        return current.onHit(time);
+      } else if (action === 'release') {
+        return current.onRelease(time);
       }
     }
-    return null;
-  }
+  };
 
-  checkRelease(currentTime: number): PlayedNote | null {
-    if (this.isProcessed || this.slot.end === undefined || this.lnHeadOffset === null) return null;
-
-    const offset = currentTime - this.slot.end;
-    const level = this.windows.getReleaseLevel(this.lnHeadOffset, offset);
-    if (level !== null) {
-      const result = {
-        time: currentTime,
-        level,
-        offset: this.lnHeadOffset,
-        releaseOffset: offset,
-        combo: level < this.windows.missLevel ? 1 : undefined,
-        acc: accuracy[level],
-      };
-      return this.finalize(result);
-    }
-    return null;
-  }
-
-  private finalize(result: HitResult): PlayedNote {
-    this.isProcessed = true;
-    return { ...this.slot, result };
-  }
+  return { onFrame, onAction };
 }
 
-export class OsuPlayer {
-  private beatmap: Beatmap;
-  private replayFrames: ReplayFrame[];
+export function play(beatmap: Beatmap, replayFrames: ReplayFrame[], resolution: 'ms' | 'replay' = 'replay'): PlayedNote[] {
+  const queues = createQueues(beatmap);
+  const windows = createWindows(beatmap.od);
+  const columns = queues.map(q => createColumn(q, windows));
+  const frames = generateActions(replayFrames, resolution);
 
-  constructor(beatmap: Beatmap, replayFrames: ReplayFrame[]) {
-    this.beatmap = beatmap;
-    this.replayFrames = replayFrames;
-  }
+  const results: PlayedNote[] = [];
 
-  play(resolution: 'ms' | 'replay' = 'replay'): PlayedNote[] {
-    const results: PlayedNote[] = [];
-    const queues = createQueues(this.beatmap);
-    const windows = new HitWindows(this.beatmap.od);
-    const columns = queues.map(q => new Column(q, windows));
-    const frames = generateActions(this.replayFrames, resolution);
-
-    for (const frame of frames) {
-      for (let c = 0; c < this.beatmap.keys; c++) {
-        const col = columns[c];
-        const result = col.checkMiss(frame.time);
-        if (result) {
-          results.push(result);
-        }
-        col.tryNext(frame.time);
+  for (const frame of frames) {
+    for (let c = 0; c < beatmap.keys; c++) {
+      const col = columns[c];
+      const missedNote = col.onFrame(frame.time);
+      if (missedNote) {
+        results.push(missedNote);
       }
-      for (let c = 0; c < this.beatmap.keys; c++) {
-        const col = columns[c];
-        const action = frame.actions[c];
-        let note: PlayedNote | null = null;
-        switch (action) {
-          case 'press':
-            note = col.checkHit(frame.time);
-            break;
-          case 'release':
-            note = col.checkRelease(frame.time);
-            break;
-        }
-        if (note) {
-          results.push(note);
-        }
-        col.tryNext(frame.time);
+
+      const action = frame.actions[c];
+      const playedNote = col.onAction(frame.time, action);
+      if (playedNote) {
+        results.push(playedNote);
       }
     }
-    return results;
   }
+  return results;
 }

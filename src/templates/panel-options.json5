@@ -1,3 +1,4 @@
+// JSON5, not TypeScript
 {
   canvas: {
     /** Total width of the canvas in px */

@@ -54,6 +54,14 @@ function formatTooltipText(data: any): string {
       .reduce<string[]>((lines, [key, value]) => {
         if (key === 'name' || key === 'title') {
           lines.unshift(`${value}`);
+        } else if (Array.isArray(value)) {
+          if (value.length <= 2) {
+            lines.push(`${key}: [${value.join(', ')}]`);
+          } else {
+            lines.push(`${key}: [`);
+            lines.push(...value.map(v => `  ${v},`));
+            lines.push(`]`);
+          }
         } else if (typeof value === 'object') {
           lines.push(`${key}: {`);
           lines.push(...getLines(value).map(line => `  ${line}`));

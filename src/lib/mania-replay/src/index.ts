@@ -1,3 +1,3 @@
 export * from './types';
 export * from './utils';
-export * from './osu-v1';
+export * as osuV1 from './osu-v1';

@@ -14,5 +14,6 @@ export interface ReplayInfo extends OsuFile {
   player: string;
   score: number;
   accuracy: number;
+  mods: string[];
   playedAt: string;
 }

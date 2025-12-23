@@ -32,13 +32,7 @@ export interface ReplayFrame {
   keyStates: boolean[],
 }
 
-export interface HitResult {
-  time: number,
+export type PlayedNote = Note & {
   level: number,
-  offset: number,
-  releaseOffset?: number,
-  combo?: number,
-  acc: number,
-}
-
-export type PlayedNote = Note & { result: HitResult };
+  actions: number[],
+};

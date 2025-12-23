@@ -1,3 +1,4 @@
+// JSON5, not TypeScript
 {
   background: {
     /** Whether to render background */

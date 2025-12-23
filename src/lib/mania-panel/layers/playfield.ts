@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import type { Note, TimingPoint, ReplayFrame, PlayedNote } from '~/lib/mania-replay/src';
-import { levelNames } from '~/lib/mania-replay/src';
+import { osuV1 } from '~/lib/mania-replay/src';
 import type { Context, KeyAction } from '../options';
 
 export const presetColorSchemes = [
@@ -184,7 +184,8 @@ function createNote(ctx: Context, note: Note | PlayedNote) {
     name: 'Note',
     start: note.start,
     end: note.end,
-    result,
+    level: 'level' in note ? osuV1.levelNames[note.level] : undefined,
+    actions: 'actions' in note ? note.actions : undefined,
   });
   head.setAttr('getData', getData);
   group.add(head);
@@ -202,12 +203,6 @@ function createNote(ctx: Context, note: Note | PlayedNote) {
     body.setAttr('getData', getData);
   }
 
-  const result = 'result' in note ? {
-    level: levelNames[note.result.level],
-    offset: note.result.offset,
-    release: note.result.releaseOffset,
-  } : undefined;
-
   return group;
 }
 
@@ -222,22 +217,24 @@ function createNotes(ctx: Context) {
     if (note.start > ctx.state.endTime || end < ctx.state.startTime) {
       continue;
     }
-    const noteGroup = new Konva.Group();
-    noteGroup.add(createNote(ctx, note));
-    if ('result' in note && !ctx.replay.useFrameActions) {
-      const playedNote = note as PlayedNote;
-      const action = {
-        column: note.column,
-        start: playedNote.start + playedNote.result.offset,
-        end: (playedNote.end !== undefined && playedNote.result?.releaseOffset !== undefined)
-          ? playedNote.end + playedNote.result.releaseOffset
-          : undefined,
-      };
-      if (ctx.replay.selectLevels.includes(playedNote.result.level)) {
-        noteGroup.add(createKeyAction(ctx, action));
+    group.add(createNote(ctx, note));
+  }
+  for (const note of ctx.beatmap.notes) {
+    if (!ctx.replay.useFrameActions &&
+      'level' in note && ctx.replay.selectLevels.includes(note.level) &&
+      'actions' in note && note.actions.length > 0
+    ) {
+      for (let i = 0; i < note.actions.length; i += 2) {
+        const action = {
+          column: note.column,
+          start: note.actions[i],
+          end: i + 1 < note.actions.length
+            ? note.actions[i + 1]
+            : undefined,
+        };
+        group.add(createKeyAction(ctx, action));
       }
     }
-    group.add(noteGroup);
   }
   return group;
 }

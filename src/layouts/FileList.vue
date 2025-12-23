@@ -72,9 +72,10 @@ const tree = computed((): NodeData[] => {
 
   const replaysWithoutBeatmap: NodeData[] = [];
   replayStore.items.forEach(rp => {
+    const mods = rp.mods && rp.mods.length > 0 ? rp.mods.join('') : 'No Mod';
     const replayNode: NodeData = {
       key: rp.replayMD5,
-      label: `${rp.player} - ${rp.playedAt}`,
+      label: `${rp.player} [${mods}] - ${rp.playedAt}`,
       type: 'replay',
     };
 
