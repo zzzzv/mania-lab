@@ -50,7 +50,6 @@ export const useReplayStore = defineStore('replayStore', {
       if (!this.items.find(r => r.replayMD5 === hash)) {
         const score = await scoreDecoder.decodeFromBuffer(buffer, false);
         const mods = new ManiaModCombinationV2(score.info.rawMods);
-        console.log(mods.acronyms);
         this.items.push({
           replayMD5: hash,
           beatmapMD5: score.info.beatmapHashMD5,

@@ -28,10 +28,10 @@ export function createBackground(ctx: Context) {
     width: ctx.canvas.width,
     height: ctx.canvas.height,
     fill: ctx.background.color,
+    listening: false,
   });
   return bg;
 }
-
 
 function getNps(beatmap: Context['beatmap'], countTails = false) {
   const nps: number[] = Array.from({ length: beatmap.duration / 1000 }, () => 0);
@@ -86,9 +86,10 @@ function updateState(ctx: Context, topY: number, bottomY: number) {
   ctx.state.startTime = startTime;
   ctx.state.endTime = startTime + visibleDuration;
   ctx.state.onChange.emit();
+  console.log(ctx.state.startTime, ctx.state.endTime);
 }
 
-export function createScrollWindow(ctx: Context) {
+function createScrollWindow(ctx: Context) {
   const init = translateState(ctx);
   const minHeight = ctx.canvas.height * (ctx.scroll.window.min / ctx.beatmap.duration);
   const maxHeight = ctx.canvas.height * (ctx.scroll.window.max / ctx.beatmap.duration);
@@ -98,8 +99,17 @@ export function createScrollWindow(ctx: Context) {
     x: 0,
     y: 0,
   });
-  
+
   const rect = new Konva.Rect({
+    x: 0,
+    y: 0,
+    width: ctx.scroll.width,
+    height: ctx.canvas.height,
+    fill: 'rgba(0, 0, 0, 0)',
+  });
+  
+  
+  const thumb = new Konva.Rect({
     x: 0,
     y: init.topY,
     width: ctx.scroll.width,
@@ -115,7 +125,7 @@ export function createScrollWindow(ctx: Context) {
       };
     },
   });
-  rect.setAttr('getData', () => ({
+  thumb.setAttr('getData', () => ({
     name: 'Window',
     start: Math.round(ctx.state.startTime),
     end: Math.round(ctx.state.endTime),
@@ -129,7 +139,7 @@ export function createScrollWindow(ctx: Context) {
     fill: 'rgba(255, 255, 255, 0.5)',
     draggable: true,
     dragBoundFunc: function(pos) {
-      const bottom = rect.y() + rect.height();
+      const bottom = thumb.y() + thumb.height();
       const newTop = clamp(pos.y + handleSize / 2, bottom - maxHeight, bottom - minHeight);
       return {
         x: this.absolutePosition().x,
@@ -146,7 +156,7 @@ export function createScrollWindow(ctx: Context) {
     fill: 'rgba(255, 255, 255, 0.5)',
     draggable: true,
     dragBoundFunc: function(pos) {
-      const top = rect.y();
+      const top = thumb.y();
       const newBottom = clamp(pos.y + handleSize / 2, top + minHeight, top + maxHeight);
       return {
         x: this.absolutePosition().x,
@@ -155,26 +165,47 @@ export function createScrollWindow(ctx: Context) {
     },
   });
 
+  rect.on('click', () => {
+    const pos = rect.getRelativePointerPosition();
+    if (pos) {
+      console.log(pos);
+      const { height } = translateState(ctx);
+      let newTopY: number;
+      let newBottomY: number;
+      if (pos.y < height / 2) {
+        newTopY = Math.max(pos.y - height / 2, 0);
+        newBottomY = newTopY + height;
+      } else {
+        newBottomY = Math.min(pos.y + height / 2, ctx.canvas.height);
+        newTopY = newBottomY - height;
+      }
+      updateState(ctx, newTopY, newBottomY);
+      thumb.y(newTopY);
+      topHandle.y(newTopY - handleSize / 2);
+      bottomHandle.y(newBottomY - handleSize / 2);
+    }
+  });
+
   topHandle.on('dragmove', () => {
     const newTopY = topHandle.y() + handleSize / 2;
-    const bottomY = rect.y() + rect.height();
+    const bottomY = thumb.y() + thumb.height();
     const newHeight = bottomY - newTopY;
-    rect.y(newTopY);
-    rect.height(newHeight);
+    thumb.y(newTopY);
+    thumb.height(newHeight);
     updateState(ctx, newTopY, bottomY);
   });
 
   bottomHandle.on('dragmove', () => {
     const newBottomY = bottomHandle.y() + handleSize / 2;
-    const newTopY = rect.y();
+    const newTopY = thumb.y();
     const newHeight = newBottomY - newTopY;
-    rect.height(newHeight);
+    thumb.height(newHeight);
     updateState(ctx, newTopY, newBottomY);
   });
 
-  rect.on('dragmove', () => {
-    const newTopY = rect.y();
-    const newBottomY = newTopY + rect.height();
+  thumb.on('dragmove', () => {
+    const newTopY = thumb.y();
+    const newBottomY = newTopY + thumb.height();
     topHandle.y(newTopY - handleSize / 2);
     bottomHandle.y(newBottomY - handleSize / 2);
     updateState(ctx, newTopY, newBottomY);
@@ -192,14 +223,15 @@ export function createScrollWindow(ctx: Context) {
   bottomHandle.on('mouseleave', () => {
     document.body.style.cursor = 'default';
   });
-  rect.on('mouseenter', () => {
+  thumb.on('mouseenter', () => {
     document.body.style.cursor = 'move';
   });
-  rect.on('mouseleave', () => {
+  thumb.on('mouseleave', () => {
     document.body.style.cursor = 'default';
   });
 
   group.add(rect);
+  group.add(thumb);
   group.add(topHandle);
   group.add(bottomHandle);
 

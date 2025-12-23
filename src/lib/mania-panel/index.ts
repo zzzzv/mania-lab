@@ -21,7 +21,6 @@ export function createPanel(container: HTMLDivElement) {
   const setOptions = (newOptions: DeepPartial<Options>) => {
     options = deepMerge(options, newOptions);
     ctx = resolveOptions(options);
-    console.log(ctx);
   }
 
   const render = () => {
