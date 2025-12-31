@@ -32,6 +32,8 @@ export interface ReplayFrame {
   keyStates: boolean[],
 }
 
+export type Mod = 'nm' | 'ez' | 'hr';
+
 export type PlayedNote = Note & {
   level: number,
   actions: number[],

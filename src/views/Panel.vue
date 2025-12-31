@@ -1,13 +1,13 @@
 <template>
   <el-container>
-    <div ref="panelContainer"></div>
     <template v-if="stateStore.selectedBeatmapMD5">
-      <el-tabs type="border-card">
-        <el-tab-pane label="Options">
-          <options-editor :template="template" v-on:update="updateOptions"/>
+      <mania-panel :options="options" v-on:update="contextUpdate" />
+      <el-tabs type="border-card" v-model="activeTab">
+        <el-tab-pane label="Options" name="options">
+          <options-editor :template="template" v-on:update="options = $event"/>
         </el-tab-pane>
-        <el-tab-pane label="Stats">
-          Stats
+        <el-tab-pane label="Stats" name="stats">
+          <level-chart :notes="playedNotes" />
         </el-tab-pane>
       </el-tabs>
     </template>
@@ -17,92 +17,74 @@
 
 <script setup lang="ts">
 import type { ManiaReplayFrame } from 'osu-mania-stable';
-import { onMounted, ref, watch } from 'vue';
-import { createPanel } from '~/lib/mania-panel';
+import { ref, watch } from 'vue';
+import type { ReplayFrame, Mod, PlayedNote } from '~/lib/mania-replay/src';
 import { useBeatmapStore, useReplayStore, useStateStore } from '~/stores';
 import { convertBeatmap, convertFrames } from '~/utils/convert';
+import type { Options, DeepPartial, Context } from '~/lib/mania-panel';
+import ManiaPanel from '~/components/ManiaPanel.vue';
 import OptionsEditor from '~/components/OptionsEditor.vue';
 import optionsTemplate from '~/templates/panel-options.json5?raw';
+import LevelChart from '~/components/charts/LevelChart.vue';
 
-const panelContainer = ref<HTMLDivElement | null>(null);
-let panel: ReturnType<typeof createPanel> | null = null;
 const beatmapStore = useBeatmapStore();
 const replayStore = useReplayStore();
 const stateStore = useStateStore();
 const template = optionsTemplate; // avoid build error
 
-const updateOptions = (newOptions: object) => {
-  if (panel) {
-    panel.setOptions(newOptions);
-    panel.render();
+const activeTab = ref('options');
+const options = ref<DeepPartial<Options>>({});
+const playedNotes = ref<PlayedNote[]>([]);
+
+function contextUpdate(value: Context) {
+  const notes = value.beatmap.notes;
+  if (notes.length > 0 && 'level' in notes[0]) {
+    playedNotes.value = notes as PlayedNote[];
+  } else {
+    playedNotes.value = [];
   }
-};
+}
 
-onMounted(() => {
-  if (panelContainer.value) {
-    const containerHeight = panelContainer.value.clientHeight;
-    panel = createPanel(panelContainer.value);
-    panel.setOptions({
-      canvas: {
-        height: containerHeight,
-      },
-    });
+watch(
+  () => stateStore.selectedBeatmapMD5,
+  async (beatmapMD5) => {
+    if (!beatmapMD5) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (panel && panelContainer.value && stateStore.selectedBeatmapMD5) {
-        panel.setOptions({
-          canvas: {
-            height: panelContainer.value.clientHeight,
-          },
-        });
-        panel.render();
+    const rawBeatmap = await beatmapStore.readBeatmap(beatmapMD5);
+    const beatmap = convertBeatmap(rawBeatmap);
+    options.value = {
+      beatmap: beatmap,
+      replay: {
+        frames: [] as ReplayFrame[],
       }
-    });
-    resizeObserver.observe(panelContainer.value);
-    
-    watch(
-      () => stateStore.selectedBeatmapMD5,
-      async (beatmapMD5) => {
-        if (!beatmapMD5 || !panel) {
-          return;
-        }
-        const rawBeatmap = await beatmapStore.readBeatmap(beatmapMD5);
-        const beatmap = convertBeatmap(rawBeatmap);
-        panel.setOptions({
-          beatmap: beatmap,
-          replay: { frames: [] },
-        });
-        panel.render();
-      },
-      { immediate: true }
-    );
+    };
+  },
+);
 
-    watch(
-      () => stateStore.selectedReplayMD5,
-      async (replayMD5) => {
-        if (!replayMD5 || !panel) {
-          return;
-        }
-        const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
-        const beatmap = convertBeatmap(rawBeatmap);
-        let frames;
-        if (replayMD5) {
-          const score = await replayStore.readReplay(replayMD5, rawBeatmap);
-          const rawFrames = score.replay.frames as ManiaReplayFrame[];
-          frames = convertFrames(beatmap.keys, rawFrames);
-        }
-        panel.setOptions({
-          beatmap: beatmap,
-          replay: {
-            frames,
-          },
-        })
-        panel.render();
+watch(
+  () => stateStore.selectedReplayMD5,
+  async (replayMD5) => {
+    if (!replayMD5) return;
+
+    const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
+    const beatmap = convertBeatmap(rawBeatmap);
+    options.value = {
+      beatmap: beatmap,
+      replay: {
+        frames: [] as ReplayFrame[],
+        mod: 'nm' as Mod,
       },
-      { immediate: true }
-    );
-  }
-});
+    }
+    if (replayMD5) {
+      const score = await replayStore.readReplay(replayMD5, rawBeatmap);
+      const rawFrames = score.replay.frames as ManiaReplayFrame[];
+      options.value.replay!.frames = convertFrames(beatmap.keys, rawFrames);
+      const mods = replayStore.items.find(r => r.replayMD5 === replayMD5)!.mods;
+      options.value.replay!.mod = mods.includes('EZ') ? 'ez' :
+                           mods.includes('HR') ? 'hr' : 'nm';
+    }
+  },
+);
 </script>
 
 <style scoped>

@@ -37,8 +37,6 @@
     // color: '#FF0000', // red
     /** Width of the replay cursor in px */
     // width: 4,
-    /** Replay frames */
-    // frames: [] as ReplayFrame[],
     /** Levels to render from note results */
     // selectLevels: [0, 1, 2, 3, 4, 5],
     /** Render key action from replay frames rather than notes result */

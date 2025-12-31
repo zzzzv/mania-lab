@@ -1,11 +1,11 @@
-import type { Beatmap, Note, ReplayFrame, PlayedNote } from './types';
+import type { Beatmap, Note, ReplayFrame, PlayedNote, Mod } from './types';
 import { createQueues, generateActions } from './utils';
 import type { NoteQueue, Action } from './utils';
 
-export const levelAccuracies = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0] as const;
-export const levelNames = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'] as const;
+export const levelAccuracies = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0];
+export const levelNames = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'];
 
-function createWindows(od: number, mod: 'nm'|'ez'|'hr' = 'nm'): number[] {
+function createWindows(od: number, mod: Mod = 'nm'): number[] {
   const baseWindows = [
     16,
     64 - 3 * od,
@@ -147,9 +147,14 @@ function createColumn(queue: NoteQueue, windows: number[]) {
   return { onFrame, onAction };
 }
 
-export function play(beatmap: Beatmap, replayFrames: ReplayFrame[], resolution: 'ms' | 'replay' = 'replay'): PlayedNote[] {
+export function play(
+  beatmap: Beatmap,
+  replayFrames: ReplayFrame[],
+  mod: Mod = 'nm',
+  resolution: 'ms' | 'replay' = 'replay'
+): PlayedNote[] {
   const queues = createQueues(beatmap);
-  const windows = createWindows(beatmap.od);
+  const windows = createWindows(beatmap.od, mod);
   const columns = queues.map(q => createColumn(q, windows));
   const frames = generateActions(replayFrames, resolution);
 

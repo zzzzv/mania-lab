@@ -7,12 +7,12 @@ import { Beatmap, ReplayFrame } from '../src/index';
 
 const FIXTURE_DIR = 'tests/fixtures/';
 
-export async function readFixture(name: string, mod: string = 'nm') {
+export async function readFixture(name: string, replay?: string) {
   const dataPath = path.join(FIXTURE_DIR, name);
   const isDir = fs.existsSync(dataPath) && fs.statSync(dataPath).isDirectory();
 
   const beatmapPath = isDir ? path.join(dataPath, 'beatmap.osu') : dataPath + '.osu';
-  const replayPath = isDir ? path.join(dataPath, mod + '.osr') : dataPath + '.osr';
+  const replayPath = isDir ? path.join(dataPath, (replay ?? 'nm') + '.osr') : (replay ?? dataPath) + '.osr';
 
   const beatmap = await new BeatmapDecoder().decodeFromPath(beatmapPath, { parseStoryboard: false });
   const score = await new ScoreDecoder().decodeFromPath(replayPath, true);
@@ -33,7 +33,7 @@ export async function readFixture(name: string, mod: string = 'nm') {
 
 export function convertBeatmap(beatmap: ManiaBeatmap): Beatmap {
   return {
-    keys: beatmap.difficulty.circleSize,
+    keys: beatmap.totalColumns,
     od: beatmap.difficulty.overallDifficulty,
     notes: beatmap.hitObjects.map(obj => ({
       start: obj.startTime,

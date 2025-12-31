@@ -11,12 +11,14 @@ export function render(ctx: Context, layer: Konva.Layer) {
     layer.add(bg);
   }
 
+  const scroll = createScrollWindow(ctx);
+  layer.add(scroll.rect);
+
   ctx.scroll.nps.createElement ??= createScrollNps;
   const scrollNps = ctx.scroll.nps.createElement(ctx);
   layer.add(scrollNps);
 
-  const scrollWindow = createScrollWindow(ctx);
-  layer.add(scrollWindow);
+  layer.add(scroll.group);
 
   layer.batchDraw();
 }
@@ -46,7 +48,7 @@ function getNps(beatmap: Context['beatmap'], countTails = false) {
 
 export function createScrollNps(ctx: Context) {
   const nps = getNps(ctx.beatmap, ctx.scroll.nps.countTails);
-  const maxNps = Math.max(...nps);
+  const maxNps = Math.max(...nps, 1);
   const barHeight = ctx.canvas.height / nps.length;
   const barSpacing = Math.min(2, barHeight / 8);
   const group = new Konva.Group({
@@ -86,7 +88,6 @@ function updateState(ctx: Context, topY: number, bottomY: number) {
   ctx.state.startTime = startTime;
   ctx.state.endTime = startTime + visibleDuration;
   ctx.state.onChange.emit();
-  console.log(ctx.state.startTime, ctx.state.endTime);
 }
 
 function createScrollWindow(ctx: Context) {
@@ -107,7 +108,6 @@ function createScrollWindow(ctx: Context) {
     height: ctx.canvas.height,
     fill: 'rgba(0, 0, 0, 0)',
   });
-  
   
   const thumb = new Konva.Rect({
     x: 0,
@@ -230,10 +230,9 @@ function createScrollWindow(ctx: Context) {
     document.body.style.cursor = 'default';
   });
 
-  group.add(rect);
   group.add(thumb);
   group.add(topHandle);
   group.add(bottomHandle);
 
-  return group;
+  return {group, rect};
 }

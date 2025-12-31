@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import type { Note, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
-import { osuV1, type PlayedNote } from '~/lib/mania-replay/src';
+import { osuV1, type PlayedNote, type Mod } from '~/lib/mania-replay/src';
 import { createEvent } from '../mania-panel/utils';
 
 export type noteColorSelector = (keys: number, object: Note) => string;
@@ -60,6 +60,8 @@ export function createDefaultOptions() {
       width: 4,
       /** Replay frames */
       frames: [] as ReplayFrame[],
+      /** Mod applied to the replay */
+      mod: 'nm' as Mod,
       /** Levels to render from note results */
       selectLevels: [0, 1, 2, 3, 4, 5],
       /** Render key action from replay frames rather than notes result */
@@ -134,7 +136,7 @@ export function resolveOptions(options: Options) {
     duration = Math.ceil(lastEnd / 1000) * 1000;
 
     if (options.replay.frames.length > 0) {
-      notes = osuV1.play(options.beatmap, options.replay.frames);
+      notes = osuV1.play(options.beatmap, options.replay.frames, options.replay.mod);
     }
   }
 

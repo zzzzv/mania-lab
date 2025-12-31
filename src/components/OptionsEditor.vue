@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import JSON5 from 'json5';
 import { ElMessage } from 'element-plus';
 
@@ -18,28 +18,35 @@ const emit = defineEmits<{
 }>();
 
 const editorContainer = ref<HTMLDivElement | null>(null);
+let editorView: EditorView | null = null;
+
+function EditorUpdate(view: EditorView) {
+  try {
+    const value = JSON5.parse(view.state.doc.toString());
+    emit('update', value);
+  } catch {
+    ElMessage.error('Invalid JSON5 format. Please correct the errors.');
+  }
+}
 
 onMounted(() => {
-  if (editorContainer.value) {
-    new EditorView({
-      extensions: [
-        basicSetup,
-        javascript(),
-        EditorView.domEventHandlers({
-          blur: (_, view) => {
-            try {
-              const value = JSON5.parse(view.state.doc.toString());
-              emit('update', value);
-            } catch (e) {
-              ElMessage.error('Invalid JSON5 format. Please correct the errors.');
-            }
-          }
-        })
-      ],
-      parent: editorContainer.value,
-      doc: props.template
-    });
-  }
+  if (!editorContainer.value) return;
+
+  editorView = new EditorView({
+    extensions: [
+      basicSetup,
+      javascript(),
+      EditorView.domEventHandlers({
+        blur: (_, view) => EditorUpdate(view),
+      })
+    ],
+    parent: editorContainer.value,
+    doc: props.template
+  });
 });
 
+onBeforeUnmount(() => {
+  editorView?.destroy();
+  editorView = null;
+});
 </script>

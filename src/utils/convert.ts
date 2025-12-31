@@ -2,7 +2,7 @@ import { ManiaBeatmap, ManiaReplayFrame, Hold } from 'osu-mania-stable';
 
 export function convertBeatmap(beatmap: ManiaBeatmap) {
   return {
-    keys: beatmap.difficulty.circleSize,
+    keys: beatmap.totalColumns,
     od: beatmap.difficulty.overallDifficulty,
     notes: beatmap.hitObjects.map(obj => ({
       start: obj.startTime,
