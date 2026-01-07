@@ -5,7 +5,8 @@
         <span>Files</span>
         <el-button
           style="float: right"
-          type="text"
+          type="danger"
+          link
           @click="clearAll"
         >
           Clear All

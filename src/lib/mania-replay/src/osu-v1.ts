@@ -2,8 +2,8 @@ import type { Beatmap, Note, ReplayFrame, PlayedNote, Mod } from './types';
 import { createQueues, generateActions } from './utils';
 import type { NoteQueue, Action } from './utils';
 
-export const levelAccuracies = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0];
-export const levelNames = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'];
+export const accTable = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0];
+export const nameTable = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'];
 
 function createWindows(od: number, mod: Mod = 'nm'): number[] {
   const baseWindows = [
@@ -22,7 +22,7 @@ function toLNWindows(windows: Readonly<number[]>) {
   return windows.map((w, i) => i === 0 ? w * 1.2 : i === 1 ? w * 1.1 : w);
 };
 
-function getLevel(offset: number, windows: Readonly<number[]>) {
+function getResult(offset: number, windows: Readonly<number[]>) {
   for (let i = 0; i < 3; i++) {
     if (offset >= -windows[i] && offset <= windows[i]) {
       return i;
@@ -39,7 +39,7 @@ function getLevel(offset: number, windows: Readonly<number[]>) {
 function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) {
   const playedNote: PlayedNote = {
     ...note,
-    level: -1,
+    result: -1,
     actions: [] as number[],
   };
   const windows = note.end === undefined ? baseWindows : toLNWindows(baseWindows);
@@ -57,8 +57,8 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
         (playedNote.actions.length === 0 && time > note.start + windows[3] - 1)
       );
     if (isProcessed) {
-      if (playedNote.level < 0) {
-        playedNote.level = 5;
+      if (playedNote.result < 0) {
+        playedNote.result = 5;
       }
       return playedNote;
     }
@@ -68,10 +68,10 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
     if (isProcessed) return;
     
     if (note.end === undefined) {
-      let level = getLevel(time - note.start, windows);
+      let level = getResult(time - note.start, windows);
       if (level !== null) {
         isProcessed = true;
-        playedNote.level = level;
+        playedNote.result = level;
         playedNote.actions.push(time);
         return playedNote;
       }
@@ -81,13 +81,13 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
     }
   };
 
-  const _getLNLevel = (tailOffset: number) => {
+  const _getLNResult = (tailOffset: number) => {
     if (tailOffset < -windows[4]) return 5;
 
-    const headLevel = getLevel(headTime! - note.start, windows) ?? 4;
+    const headResult = getResult(headTime! - note.start, windows) ?? 4;
     const meanOffset = (Math.abs(headTime! - note.start) + Math.abs(tailOffset)) / 2;
-    const level = getLevel(meanOffset, windows) ?? 4;
-    return Math.max(headLevel, level, dropped ? 2 : 0);
+    const result = getResult(meanOffset, windows) ?? 4;
+    return Math.max(headResult, result, dropped ? 2 : 0);
   };
 
   const onRelease = (time: number) => {
@@ -95,7 +95,7 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
 
     const offset = time - note.end;
     if (offset < -windows[4]) {
-      playedNote.level = _getLNLevel(offset);
+      playedNote.result = _getLNResult(offset);
       playedNote.actions.push(time);
       dropped = true;
       headTime = null;
@@ -103,8 +103,8 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
     }
 
     isProcessed = true;
-    const level = _getLNLevel(offset);
-    playedNote.level = level;
+    const level = _getLNResult(offset);
+    playedNote.result = level;
     playedNote.actions.push(time);
     return playedNote;
   };

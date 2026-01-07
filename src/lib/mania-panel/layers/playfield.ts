@@ -165,7 +165,7 @@ function createAxisLabels(ctx: Context) {
   return group;
 }
 
-function createNote(ctx: Context, note: Note | PlayedNote) {
+function createNote(ctx: Context, note: PlayedNote) {
   const x = note.column * ctx.note.width;
   const y = translateTime(ctx, note.start);
   const color = ctx.note.selectColor!(ctx.beatmap.keys, note);
@@ -184,8 +184,8 @@ function createNote(ctx: Context, note: Note | PlayedNote) {
     name: 'Note',
     start: note.start,
     end: note.end,
-    level: 'level' in note ? osuV1.levelNames[note.level] : undefined,
-    actions: 'actions' in note ? note.actions : undefined,
+    result: note.result !== -1 ? osuV1.nameTable[note.result] : undefined,
+    actions: note.actions.length > 0 ? note.actions : undefined,
   });
   head.setAttr('getData', getData);
   group.add(head);
@@ -221,8 +221,8 @@ function createNotes(ctx: Context) {
   }
   for (const note of ctx.beatmap.notes) {
     if (!ctx.replay.useFrameActions &&
-      'level' in note && ctx.replay.selectLevels.includes(note.level) &&
-      'actions' in note && note.actions.length > 0
+      note.result !== -1 && ctx.replay.selectLevels.includes(note.result) &&
+      note.actions.length > 0
     ) {
       for (let i = 0; i < note.actions.length; i += 2) {
         const action = {

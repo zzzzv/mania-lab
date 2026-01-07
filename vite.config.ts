@@ -32,7 +32,6 @@ export default defineConfig({
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           'element-plus': ['element-plus'],
           'codemirror': ['codemirror', '@codemirror/lang-javascript'],
-          'echarts': ['echarts'],
         },
       },
     },

@@ -1,6 +1,6 @@
 import Konva from 'konva';
-import type { Note, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
-import { osuV1, type PlayedNote, type Mod } from '~/lib/mania-replay/src';
+import type { Note, PlayedNote, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
+import { osuV1, type Mod } from '~/lib/mania-replay/src';
 import { createEvent } from '../mania-panel/utils';
 
 export type noteColorSelector = (keys: number, object: Note) => string;
@@ -51,7 +51,7 @@ export function createDefaultOptions() {
       /** Custom function to select note colors */
       selectColor: undefined as noteColorSelector | undefined,
       /** Custom function to create note elements */
-      createElement: undefined as elementCreator<Note> | undefined,
+      createElement: undefined as elementCreator<PlayedNote> | undefined,
     },
     replay: {
       /** Color of the replay cursor */
@@ -129,7 +129,11 @@ export function resolveOptions(options: Options) {
   if (options.note.width === 'auto' && options.canvas.width === 'auto') {
     throw new Error('Cannot set both note.width and stage.width to "auto"');
   }
-  let notes: Note[] | PlayedNote[] = options.beatmap.notes;
+  let notes: PlayedNote[] = options.beatmap.notes.map(n => ({
+    ...n,
+    result: -1,
+    actions: [] as number[],
+  }));
   let duration = 60000;
   if (notes.length > 0) {
     const lastEnd = notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);

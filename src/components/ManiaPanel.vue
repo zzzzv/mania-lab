@@ -31,6 +31,7 @@ watch(
       },
     });
       panel.render();
+      emit('update', panel.getContext());
     }
   },
   { deep: true }

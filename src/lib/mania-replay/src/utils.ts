@@ -84,19 +84,19 @@ export function *generateActions(frames: ReplayFrame[], resolution: 'ms' | 'repl
 
 export function summarize(
   notes: PlayedNote[],
-  levelAccuracies: readonly number[]
+  accTable: readonly number[]
 ) {
-  const counts = Array.from({ length: levelAccuracies.length }, () => 0);
+  const counts = Array.from({ length: accTable.length }, () => 0);
   let totalAcc = 0;
   let totalHits = 0;
   let maxCombo = 0;
   let currentCombo = 0;
 
   for (const note of notes) {
-    counts[note.level] = counts[note.level]! + 1;
-    totalAcc += levelAccuracies[note.level];
+    counts[note.result] = counts[note.result]! + 1;
+    totalAcc += accTable[note.result];
     totalHits++;
-    if (note.level < levelAccuracies.length - 1) {
+    if (note.result < accTable.length - 1) {
       currentCombo += 1;
       if (currentCombo > maxCombo) {
         maxCombo = currentCombo;

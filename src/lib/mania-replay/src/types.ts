@@ -35,6 +35,6 @@ export interface ReplayFrame {
 export type Mod = 'nm' | 'ez' | 'hr';
 
 export type PlayedNote = Note & {
-  level: number,
+  result: number,
   actions: number[],
 };

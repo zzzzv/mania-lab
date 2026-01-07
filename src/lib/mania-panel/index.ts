@@ -46,7 +46,7 @@ export function createPanel(container: HTMLDivElement) {
     setOptions,
     render,
     destroy,
-    get context() { return ctx; }
+    getContext: () => ctx,
   };
 }
 

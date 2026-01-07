@@ -7,7 +7,7 @@
           <options-editor :template="template" v-on:update="options = $event"/>
         </el-tab-pane>
         <el-tab-pane label="Stats" name="stats">
-          <level-chart :notes="playedNotes" />
+          <result-table :notes="playedNotes" />
         </el-tab-pane>
       </el-tabs>
     </template>
@@ -25,7 +25,7 @@ import type { Options, DeepPartial, Context } from '~/lib/mania-panel';
 import ManiaPanel from '~/components/ManiaPanel.vue';
 import OptionsEditor from '~/components/OptionsEditor.vue';
 import optionsTemplate from '~/templates/panel-options.json5?raw';
-import LevelChart from '~/components/charts/LevelChart.vue';
+import ResultTable from '~/components/charts/ResultTable.vue';
 
 const beatmapStore = useBeatmapStore();
 const replayStore = useReplayStore();
@@ -38,10 +38,10 @@ const playedNotes = ref<PlayedNote[]>([]);
 
 function contextUpdate(value: Context) {
   const notes = value.beatmap.notes;
-  if (notes.length > 0 && 'level' in notes[0]) {
-    playedNotes.value = notes as PlayedNote[];
+  if (notes.length > 0 && notes[0].result !== -1) {
+    playedNotes.value = notes;
   } else {
-    playedNotes.value = [];
+    playedNotes.value = [] as PlayedNote[];
   }
 }
 
@@ -68,7 +68,7 @@ watch(
 
     const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
     const beatmap = convertBeatmap(rawBeatmap);
-    options.value = {
+    const newOptions: DeepPartial<Options> = {
       beatmap: beatmap,
       replay: {
         frames: [] as ReplayFrame[],
@@ -78,11 +78,12 @@ watch(
     if (replayMD5) {
       const score = await replayStore.readReplay(replayMD5, rawBeatmap);
       const rawFrames = score.replay.frames as ManiaReplayFrame[];
-      options.value.replay!.frames = convertFrames(beatmap.keys, rawFrames);
+      newOptions.replay!.frames = convertFrames(beatmap.keys, rawFrames);
       const mods = replayStore.items.find(r => r.replayMD5 === replayMD5)!.mods;
-      options.value.replay!.mod = mods.includes('EZ') ? 'ez' :
+      newOptions.replay!.mod = mods.includes('EZ') ? 'ez' :
                            mods.includes('HR') ? 'hr' : 'nm';
     }
+    options.value = newOptions;
   },
 );
 </script>
