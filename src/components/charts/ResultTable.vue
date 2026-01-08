@@ -9,7 +9,7 @@
         />
       </el-col>
       <el-col>
-        <el-statistic title="Max Combo" :value="summary.maxCombo" />
+        <el-statistic title="Max Combo(no hold ticks)" :value="summary.maxCombo" />
       </el-col>
     </el-row>
     <el-table :data="summary.counts" border show-summary>

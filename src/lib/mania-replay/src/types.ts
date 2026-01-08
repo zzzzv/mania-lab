@@ -32,7 +32,7 @@ export interface ReplayFrame {
   keyStates: boolean[],
 }
 
-export type Mod = 'nm' | 'ez' | 'hr';
+export type Mod = 'NM' | 'EZ' | 'HR';
 
 export type PlayedNote = Note & {
   result: number,

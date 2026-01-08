@@ -61,7 +61,7 @@ export function createDefaultOptions() {
       /** Replay frames */
       frames: [] as ReplayFrame[],
       /** Mod applied to the replay */
-      mod: 'nm' as Mod,
+      mod: 'NM' as Mod,
       /** Levels to render from note results */
       selectLevels: [0, 1, 2, 3, 4, 5],
       /** Render key action from replay frames rather than notes result */

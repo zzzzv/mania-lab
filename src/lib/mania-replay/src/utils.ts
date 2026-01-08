@@ -93,7 +93,7 @@ export function summarize(
   let currentCombo = 0;
 
   for (const note of notes) {
-    counts[note.result] = counts[note.result]! + 1;
+    counts[note.result] = counts[note.result] + 1;
     totalAcc += accTable[note.result];
     totalHits++;
     if (note.result < accTable.length - 1) {

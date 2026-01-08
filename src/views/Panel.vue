@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { ManiaRuleset } from 'osu-mania-stable';
 import type { ManiaReplayFrame } from 'osu-mania-stable';
 import { ref, watch } from 'vue';
 import type { ReplayFrame, Mod, PlayedNote } from '~/lib/mania-replay/src';
@@ -66,24 +67,29 @@ watch(
   async (replayMD5) => {
     if (!replayMD5) return;
 
+    const ruleset = new ManiaRuleset();
     const rawBeatmap = await beatmapStore.readBeatmap(stateStore.selectedBeatmapMD5!);
-    const beatmap = convertBeatmap(rawBeatmap);
-    const newOptions: DeepPartial<Options> = {
+    const score = await replayStore.readReplay(replayMD5, rawBeatmap);
+    const mods = ruleset.createModCombination(score.info.rawMods);
+
+    const maniaBeatmap = ruleset.applyToBeatmapWithMods(rawBeatmap, mods);
+    if (mods.has('HR') || mods.has('EZ')) {
+      maniaBeatmap.difficulty.overallDifficulty = rawBeatmap.difficulty.overallDifficulty;
+    }
+    const beatmap = convertBeatmap(maniaBeatmap);
+
+    const rawFrames = score.replay.frames as ManiaReplayFrame[];
+    const frames = convertFrames(beatmap.keys, rawFrames);
+
+    const mod = mods.has('EZ') ? 'EZ' :
+                mods.has('HR') ? 'HR' : 'NM';
+    options.value = {
       beatmap: beatmap,
       replay: {
-        frames: [] as ReplayFrame[],
-        mod: 'nm' as Mod,
-      },
+        frames: frames,
+        mod: mod as Mod,
+      }
     }
-    if (replayMD5) {
-      const score = await replayStore.readReplay(replayMD5, rawBeatmap);
-      const rawFrames = score.replay.frames as ManiaReplayFrame[];
-      newOptions.replay!.frames = convertFrames(beatmap.keys, rawFrames);
-      const mods = replayStore.items.find(r => r.replayMD5 === replayMD5)!.mods;
-      newOptions.replay!.mod = mods.includes('EZ') ? 'ez' :
-                           mods.includes('HR') ? 'hr' : 'nm';
-    }
-    options.value = newOptions;
   },
 );
 </script>

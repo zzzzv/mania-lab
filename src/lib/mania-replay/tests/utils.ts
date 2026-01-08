@@ -20,6 +20,9 @@ export async function readFixture(name: string, replay?: string) {
   const ruleset = new ManiaRuleset();
   const mods = ruleset.createModCombination(score.info.rawMods);
   const maniaBeatmap = ruleset.applyToBeatmapWithMods(beatmap, mods);
+  if (mods.has('HR') || mods.has('EZ')) {
+    maniaBeatmap.difficulty.overallDifficulty = beatmap.difficulty.overallDifficulty;
+  }
   const maniaReplay = ruleset.applyToReplay(score.replay!, maniaBeatmap);
 
   return {

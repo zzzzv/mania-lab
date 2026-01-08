@@ -5,12 +5,13 @@ import { summarize } from '../src/utils';
 import type { Mod } from '../src/types'
 import { readFixture, convertBeatmap, convertReplay, formatScoreInfo, hasHold } from './utils';
 
-async function runTest(name: string, mod?: Mod, osr?: string) {
+async function runTest(name: string, osr?: string, mod?: Mod) {
   const { beatmap, score } = await readFixture(name, osr ?? mod);
+
   const convertedBeatmap = convertBeatmap(beatmap);
   const replay = convertReplay(convertedBeatmap.keys, score.replay!.frames as ManiaReplayFrame[]);
   const notes = osuV1.play(convertedBeatmap, replay, mod);
-  const summary = summarize(notes, osuV1.levelAccuracies);
+  const summary = summarize(notes, osuV1.accTable);
   const info = formatScoreInfo(score.info);
 
   expect(summary.totalHits).toBe(info.totalHits);
@@ -24,16 +25,16 @@ async function runTest(name: string, mod?: Mod, osr?: string) {
 describe('OsuV1 rice', () => {
   test.for(['7kreg7j', '7kreg8st'])('%s', name => runTest(name));
   test.for([['7kreg6', '95'], ['7kreg6', '96'], ['7kreg7', '95'], ['7kreg7', '96']])
-    ('%s %s', ([name, osr]) => runTest(name, 'nm', osr));
+    ('%s %s', ([name, osr]) => runTest(name, osr));
 });
 
 describe('OsuV1 LN', () => {
   test.for(['sparkle', 'samsa', 'pupa'])('%s', name => runTest(name));
   test.for(['7kln9g', '7kln10i'])('%s', name => runTest(name));
   test.for([['7kln8', '95'], ['7kln8', '96'], ['7kln9', '95'], ['7kln9', '96']])
-    ('%s %s', ([name, osr]) => runTest(name, 'nm', osr));
+    ('%s %s', ([name, osr]) => runTest(name, osr));
 });
 
 describe('OsuV1 mods', () => {
-  test.for(['ez', 'hr'])('pupa %s', mod => runTest('pupa', mod as Mod));
+  test.for(['EZ', 'HR'])('pupa %s', mod => runTest('pupa', mod.toLowerCase(), mod as Mod));
 });

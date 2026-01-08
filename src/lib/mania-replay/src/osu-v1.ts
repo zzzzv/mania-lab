@@ -5,7 +5,7 @@ import type { NoteQueue, Action } from './utils';
 export const accTable = [1.0, 1.0, 2/3, 1/3, 1/6, 0.0];
 export const nameTable = ['Perfect', 'Great', 'Good', 'Ok', 'Meh', 'Miss'];
 
-function createWindows(od: number, mod: Mod = 'nm'): number[] {
+function createWindows(od: number, mod: Mod = 'NM'): number[] {
   const baseWindows = [
     16,
     64 - 3 * od,
@@ -14,7 +14,7 @@ function createWindows(od: number, mod: Mod = 'nm'): number[] {
     151 - 3 * od,
     188 - 3 * od,
   ];
-  const modFactor = mod === 'ez' ? 1.4 : mod === 'hr' ? 1/1.4 : 1.0;
+  const modFactor = mod === 'EZ' ? 1.4 : mod === 'HR' ? 1/1.4 : 1.0;
   return baseWindows.map(w => w * modFactor);
 };
 
@@ -39,7 +39,7 @@ function getResult(offset: number, windows: Readonly<number[]>) {
 function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) {
   const playedNote: PlayedNote = {
     ...note,
-    result: -1,
+    result: 5,
     actions: [] as number[],
   };
   const windows = note.end === undefined ? baseWindows : toLNWindows(baseWindows);
@@ -57,9 +57,6 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
         (playedNote.actions.length === 0 && time > note.start + windows[3] - 1)
       );
     if (isProcessed) {
-      if (playedNote.result < 0) {
-        playedNote.result = 5;
-      }
       return playedNote;
     }
   };
@@ -85,7 +82,8 @@ function createJudgement(note: Readonly<Note>, baseWindows: Readonly<number[]>) 
     if (tailOffset < -windows[4]) return 5;
 
     const headResult = getResult(headTime! - note.start, windows) ?? 4;
-    const meanOffset = (Math.abs(headTime! - note.start) + Math.abs(tailOffset)) / 2;
+    const clipTailOffset = Math.min(tailOffset, windows[4]);
+    const meanOffset = (Math.abs(headTime! - note.start) + Math.abs(clipTailOffset)) / 2;
     const result = getResult(meanOffset, windows) ?? 4;
     return Math.max(headResult, result, dropped ? 2 : 0);
   };
@@ -150,7 +148,7 @@ function createColumn(queue: NoteQueue, windows: number[]) {
 export function play(
   beatmap: Beatmap,
   replayFrames: ReplayFrame[],
-  mod: Mod = 'nm',
+  mod: Mod = 'NM',
   resolution: 'ms' | 'replay' = 'replay'
 ): PlayedNote[] {
   const queues = createQueues(beatmap);

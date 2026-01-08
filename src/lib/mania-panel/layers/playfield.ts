@@ -219,24 +219,42 @@ function createNotes(ctx: Context) {
     }
     group.add(createNote(ctx, note));
   }
+  if (ctx.replay.useFrameActions) return group;
+
   for (const note of ctx.beatmap.notes) {
-    if (!ctx.replay.useFrameActions &&
-      note.result !== -1 && ctx.replay.selectLevels.includes(note.result) &&
-      note.actions.length > 0
-    ) {
-      for (let i = 0; i < note.actions.length; i += 2) {
-        const action = {
-          column: note.column,
-          start: note.actions[i],
-          end: i + 1 < note.actions.length
-            ? note.actions[i + 1]
-            : undefined,
-        };
-        group.add(createKeyAction(ctx, action));
+    if (ctx.replay.selectLevels.includes(note.result)) {
+      if (note.actions.length === 0) {
+        group.add(createMissAction(ctx, note));
+      } else {
+        for (let i = 0; i < note.actions.length; i += 2) {
+          const action = {
+            column: note.column,
+            start: note.actions[i],
+            end: i + 1 < note.actions.length
+              ? note.actions[i + 1]
+              : undefined,
+          };
+          group.add(createKeyAction(ctx, action));
+        }
       }
     }
   }
   return group;
+}
+
+function createMissAction(ctx: Context, note: PlayedNote) {
+  const midTime = note.end ? (note.start + note.end) / 2 : note.start;
+  const text = new Konva.Text({
+    text: 'X',
+    x: note.column * ctx.note.width + ctx.note.width / 2,
+    y: translateTime(ctx, midTime),
+    fontSize: ctx.note.bodyWidth,
+    fontStyle: 'bold',
+    fill: ctx.replay.color,
+  });
+  text.offsetX(text.width() / 2);
+  text.offsetY(text.height() / 2);
+  return text;
 }
 
 function *generateActionsFromFrame(replay: ReplayFrame[]): Generator<KeyAction> {
@@ -261,7 +279,6 @@ function createKeyAction(ctx: Context, action: KeyAction) {
   const x = action.column * ctx.note.width;
   const pressY = translateTime(ctx, action.start);
   const grid = ctx.note.width / 4;
-  
 
   const lines = [[x + grid, pressY, x + grid * 3, pressY]];
   if (action.end) {
