@@ -7,7 +7,7 @@ export type noteColorSelector = (keys: number, object: Note) => string;
 export type Element = Konva.Group | Konva.Shape;
 export type elementCreator<T> = (ctx: Context, object: T) => Element;
 export type formatter<T> = (data: T) => string;
-export type KeyAction = Note
+export type KeyAction = Note & { result: number };
 
 export function createDefaultOptions() {
   return {
@@ -54,9 +54,9 @@ export function createDefaultOptions() {
       createElement: undefined as elementCreator<PlayedNote> | undefined,
     },
     replay: {
-      /** Color of the replay cursor */
-      color: '#FF0000', // red
-      /** Width of the replay cursor in px */
+      /** Colors of the replay keys */
+      colors: ['#FF7A00', '#FFD000', '#00FF6A', '#00D1FF', '#B56BFF', '#FF0000'],
+      /** Width of the replay keys in px */
       width: 4,
       /** Replay frames */
       frames: [] as ReplayFrame[],

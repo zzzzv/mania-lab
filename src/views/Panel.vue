@@ -9,6 +9,9 @@
         <el-tab-pane label="Stats" name="stats">
           <result-table :notes="playedNotes" />
         </el-tab-pane>
+        <el-tab-pane label="Context" name="context">
+          <json-viewer :value="context" :expand-depth="2" />
+        </el-tab-pane>
       </el-tabs>
     </template>
     <el-empty v-else description="Select a beatmap or replay to view" />
@@ -18,7 +21,7 @@
 <script setup lang="ts">
 import { ManiaRuleset } from 'osu-mania-stable';
 import type { ManiaReplayFrame } from 'osu-mania-stable';
-import { ref, watch } from 'vue';
+import { ref, watch, computed, shallowRef, triggerRef } from 'vue';
 import type { ReplayFrame, Mod, PlayedNote } from '~/lib/mania-replay/src';
 import { useBeatmapStore, useReplayStore, useStateStore } from '~/stores';
 import { convertBeatmap, convertFrames } from '~/utils/convert';
@@ -27,6 +30,7 @@ import ManiaPanel from '~/components/ManiaPanel.vue';
 import OptionsEditor from '~/components/OptionsEditor.vue';
 import optionsTemplate from '~/templates/panel-options.json5?raw';
 import ResultTable from '~/components/charts/ResultTable.vue';
+import { JsonViewer } from 'vue3-json-viewer';
 
 const beatmapStore = useBeatmapStore();
 const replayStore = useReplayStore();
@@ -35,15 +39,18 @@ const template = optionsTemplate; // avoid build error
 
 const activeTab = ref('options');
 const options = ref<DeepPartial<Options>>({});
-const playedNotes = ref<PlayedNote[]>([]);
+
+const context = shallowRef<Context>({} as Context);
+
+const playedNotes = computed<PlayedNote[]>(() => {
+  const notes = context.value?.beatmap?.notes ?? [];
+  const played = notes.length > 0 && notes[0].result !== -1;
+  return played ? notes : [] as PlayedNote[];
+});
 
 function contextUpdate(value: Context) {
-  const notes = value.beatmap.notes;
-  if (notes.length > 0 && notes[0].result !== -1) {
-    playedNotes.value = notes;
-  } else {
-    playedNotes.value = [] as PlayedNote[];
-  }
+  context.value = value;
+  triggerRef(context);
 }
 
 watch(

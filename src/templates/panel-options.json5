@@ -33,9 +33,9 @@
     // bodyColor: '#CCCCCC' as string | undefined,
   },
   replay: {
-    /** Color of the replay cursor */
-    // color: '#FF0000', // red
-    /** Width of the replay cursor in px */
+    /** Colors of the replay keys */
+    // colors: ['#FF7A00', '#FFD000', '#00FF6A', '#00D1FF', '#B56BFF', '#FF0000'],
+    /** Width of the replay keys in px */
     // width: 4,
     /** Levels to render from note results */
     // selectLevels: [0, 1, 2, 3, 4, 5],

@@ -233,6 +233,7 @@ function createNotes(ctx: Context) {
             end: i + 1 < note.actions.length
               ? note.actions[i + 1]
               : undefined,
+            result: note.result,
           };
           group.add(createKeyAction(ctx, action));
         }
@@ -250,7 +251,7 @@ function createMissAction(ctx: Context, note: PlayedNote) {
     y: translateTime(ctx, midTime),
     fontSize: ctx.note.bodyWidth,
     fontStyle: 'bold',
-    fill: ctx.replay.color,
+    fill: ctx.replay.colors[ctx.replay.colors.length - 1],
   });
   text.offsetX(text.width() / 2);
   text.offsetY(text.height() / 2);
@@ -269,7 +270,7 @@ function *generateActionsFromFrame(replay: ReplayFrame[]): Generator<KeyAction> 
         pressTimes[i] = frame.time;
       } else if (!isPressed && pressTime !== null) {
         pressTimes[i] = null;
-        yield { column: i, start: pressTime, end: frame.time };
+        yield { column: i, start: pressTime, end: frame.time, result: -1 };
       }
     }
   }
@@ -287,10 +288,14 @@ function createKeyAction(ctx: Context, action: KeyAction) {
   }
 
   const group = new Konva.Group();
+  const color = action.result !== -1
+    ? ctx.replay.colors[action.result]
+    : ctx.replay.colors[ctx.replay.colors.length - 1];
+
   for (const linePoints of lines) {
     const line = new Konva.Line({
       points: linePoints,
-      stroke: ctx.replay.color,
+      stroke: color,
       strokeWidth: ctx.replay.width,
     });
     line.setAttr('getData', () => ({

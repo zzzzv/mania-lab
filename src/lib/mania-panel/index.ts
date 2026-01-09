@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import { createDefaultOptions, resolveOptions } from './options';
-import type { Options } from './options';
+import type { Options, Context } from './options';
 import { UI, PlayField, Tooltip } from './layers';
 import { deepMerge, type DeepPartial } from './utils';
 
@@ -46,7 +46,7 @@ export function createPanel(container: HTMLDivElement) {
     setOptions,
     render,
     destroy,
-    getContext: () => ctx,
+    getContext: (): Readonly<Context> => ctx,
   };
 }
 

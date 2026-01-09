@@ -12,6 +12,7 @@
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.4",
     "@element-plus/icons-vue": "^2.3.2",
+    "clipboard": "^2.0.11",
     "codemirror": "^6.0.2",
     "element-plus": "^2.13.0",
     "idb-keyval": "^6.2.2",
@@ -26,7 +27,8 @@
     "pinia-plugin-persistedstate": "^4.7.1",
     "vue": "^3.5.26",
     "vue-konva": "^3.3.0",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "vue3-json-viewer": "^2.4.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.4",
