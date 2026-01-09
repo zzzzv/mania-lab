@@ -7,10 +7,10 @@
           <options-editor :template="template" v-on:update="options = $event"/>
         </el-tab-pane>
         <el-tab-pane label="Stats" name="stats">
-          <result-table :notes="playedNotes" />
+          <result-table :playResult="context?.replay.playResult ?? null" />
         </el-tab-pane>
         <el-tab-pane label="Context" name="context">
-          <json-viewer :value="context" :expand-depth="2" />
+          <json-viewer :value="context ?? {}" :expand-depth="2" />
         </el-tab-pane>
       </el-tabs>
     </template>
@@ -21,8 +21,8 @@
 <script setup lang="ts">
 import { ManiaRuleset } from 'osu-mania-stable';
 import type { ManiaReplayFrame } from 'osu-mania-stable';
-import { ref, watch, computed, shallowRef, triggerRef } from 'vue';
-import type { ReplayFrame, Mod, PlayedNote } from '~/lib/mania-replay/src';
+import { ref, watch, shallowRef, triggerRef } from 'vue';
+import type { ReplayFrame, Mod } from '~/lib/mania-replay/src';
 import { useBeatmapStore, useReplayStore, useStateStore } from '~/stores';
 import { convertBeatmap, convertFrames } from '~/utils/convert';
 import type { Options, DeepPartial, Context } from '~/lib/mania-panel';
@@ -31,6 +31,7 @@ import OptionsEditor from '~/components/OptionsEditor.vue';
 import optionsTemplate from '~/templates/panel-options.json5?raw';
 import ResultTable from '~/components/charts/ResultTable.vue';
 import { JsonViewer } from 'vue3-json-viewer';
+import { ElMessage } from 'element-plus';
 
 const beatmapStore = useBeatmapStore();
 const replayStore = useReplayStore();
@@ -40,13 +41,7 @@ const template = optionsTemplate; // avoid build error
 const activeTab = ref('options');
 const options = ref<DeepPartial<Options>>({});
 
-const context = shallowRef<Context>({} as Context);
-
-const playedNotes = computed<PlayedNote[]>(() => {
-  const notes = context.value?.beatmap?.notes ?? [];
-  const played = notes.length > 0 && notes[0].result !== -1;
-  return played ? notes : [] as PlayedNote[];
-});
+const context = shallowRef<Context | null>(null);
 
 function contextUpdate(value: Context) {
   context.value = value;
@@ -96,6 +91,17 @@ watch(
         frames: frames,
         mod: mod as Mod,
       }
+    };
+
+    const hasLN = beatmap.notes.some(note => note.end);
+    if (hasLN) {
+      ElMessage({
+        message: 'Osu V1 LN support is WIP and not accurate.',
+        type: 'warning',
+        duration: 5000,
+        showClose: true,
+        grouping: true,
+      });
     }
   },
 );

@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Note, TimingPoint, ReplayFrame, PlayedNote } from '~/lib/mania-replay/src';
+import type { Note, TimingPoint, ReplayFrame } from '~/lib/mania-replay/src';
 import { osuV1 } from '~/lib/mania-replay/src';
 import type { Context, KeyAction } from '../options';
 
@@ -53,7 +53,7 @@ export function render(ctx: Context, layer: Konva.Layer) {
 
   ctx.note.selectColor ??= createNoteColorSelector();
   ctx.note.createElement ??= createNote;
-  ctx.replay.createElement ??= createKeyAction;
+  ctx.replay.createElement ??= createReplayElement;
   const notes = createNotes(ctx);
   layer.add(notes);
 
@@ -165,7 +165,7 @@ function createAxisLabels(ctx: Context) {
   return group;
 }
 
-function createNote(ctx: Context, note: PlayedNote) {
+function createNote(ctx: Context, note: Note) {
   const x = note.column * ctx.note.width;
   const y = translateTime(ctx, note.start);
   const color = ctx.note.selectColor!(ctx.beatmap.keys, note);
@@ -179,15 +179,6 @@ function createNote(ctx: Context, note: PlayedNote) {
     fill: color,
     cornerRadius: ctx.note.rx,
   });
-  
-  const getData = () => ({
-    name: 'Note',
-    start: note.start,
-    end: note.end,
-    result: note.result !== -1 ? osuV1.nameTable[note.result] : undefined,
-    actions: note.actions.length > 0 ? note.actions : undefined,
-  });
-  head.setAttr('getData', getData);
   group.add(head);
 
   if (note.end) {
@@ -200,7 +191,6 @@ function createNote(ctx: Context, note: PlayedNote) {
       fill: ctx.note.bodyColor ?? color,
     });
     group.add(body);
-    body.setAttr('getData', getData);
   }
 
   return group;
@@ -212,38 +202,63 @@ function createNotes(ctx: Context) {
     y: 0,
   });
   const noteHeightTimeOffset = (ctx.note.height / ctx.canvas.height) * (ctx.state.endTime - ctx.state.startTime);
-  for (const note of ctx.beatmap.notes) {
+  
+  const played = ctx.replay.playResult !== null;
+  const notes = played ? ctx.replay.playResult!.notes : ctx.beatmap.notes;
+  
+  for (const note of notes) {
     const end = note.end ?? note.start + noteHeightTimeOffset;
     if (note.start > ctx.state.endTime || end < ctx.state.startTime) {
       continue;
     }
-    group.add(createNote(ctx, note));
-  }
-  if (ctx.replay.useFrameActions) return group;
 
-  for (const note of ctx.beatmap.notes) {
-    if (ctx.replay.selectLevels.includes(note.result)) {
-      if (note.actions.length === 0) {
-        group.add(createMissAction(ctx, note));
-      } else {
-        for (let i = 0; i < note.actions.length; i += 2) {
-          const action = {
-            column: note.column,
-            start: note.actions[i],
-            end: i + 1 < note.actions.length
-              ? note.actions[i + 1]
-              : undefined,
-            result: note.result,
-          };
-          group.add(createKeyAction(ctx, action));
-        }
+    const tooltipData = {
+      name: 'Note',
+      start: note.start,
+      end: note.end,
+      result: undefined as string | undefined,
+      actions: undefined as number[] | undefined,
+    };
+    const noteElement = createNote(ctx, note);
+    group.add(noteElement);
+
+    if (played) {
+      const playedNote = note as osuV1.PlayedNote;
+      if (ctx.replay.selectLevels.includes(playedNote.result.level)) {
+        const replayElement = createReplayElement(ctx, playedNote);
+        group.add(replayElement);
       }
+      tooltipData.result = osuV1.nameTable[playedNote.result.level];
+      tooltipData.actions = playedNote.actions;
+    }
+
+    noteElement.setAttr('getData', () => tooltipData);
+  }
+  return group;
+}
+
+function createReplayElement(ctx: Context, note: osuV1.PlayedNote) {
+  const group = new Konva.Group();
+
+  if (note.actions.length === 0) {
+    group.add(createMissAction(ctx, note));
+  } else {
+    for (let i = 0; i < note.actions.length; i += 2) {
+      const action = {
+        column: note.column,
+        start: note.actions[i],
+        end: i + 1 < note.actions.length
+          ? note.actions[i + 1]
+          : undefined,
+        level: note.result.level,
+      };
+      group.add(createKeyAction(ctx, action));
     }
   }
   return group;
 }
 
-function createMissAction(ctx: Context, note: PlayedNote) {
+function createMissAction(ctx: Context, note: osuV1.PlayedNote) {
   const midTime = note.end ? (note.start + note.end) / 2 : note.start;
   const text = new Konva.Text({
     text: 'X',
@@ -270,7 +285,7 @@ function *generateActionsFromFrame(replay: ReplayFrame[]): Generator<KeyAction> 
         pressTimes[i] = frame.time;
       } else if (!isPressed && pressTime !== null) {
         pressTimes[i] = null;
-        yield { column: i, start: pressTime, end: frame.time, result: -1 };
+        yield { column: i, start: pressTime, end: frame.time, level: -1 };
       }
     }
   }
@@ -288,8 +303,8 @@ function createKeyAction(ctx: Context, action: KeyAction) {
   }
 
   const group = new Konva.Group();
-  const color = action.result !== -1
-    ? ctx.replay.colors[action.result]
+  const color = action.level !== -1
+    ? ctx.replay.colors[action.level]
     : ctx.replay.colors[ctx.replay.colors.length - 1];
 
   for (const linePoints of lines) {

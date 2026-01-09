@@ -26,14 +26,13 @@
 import { ElCol } from 'element-plus';
 import { computed } from 'vue';
 import { osuV1 } from '~/lib/mania-replay/src';
-import type { PlayedNote } from '~/lib/mania-replay/src';
 
 const props = defineProps<{
-  notes: PlayedNote[];
+  playResult: osuV1.PlayResult | null;
 }>();
 
 const summary = computed(() => {
-  if (props.notes.length === 0 || props.notes[0].result === -1) return null;
+  if (!props.playResult || props.playResult.notes.length === 0) return null;
 
   const counts = osuV1.nameTable.map(name => ({
     name,
@@ -41,35 +40,19 @@ const summary = computed(() => {
     ln: 0,
     total: 0,
   }));
-  let totalAcc = 0;
-  let totalHits = 0;
-  let maxCombo = 0;
-  let currentCombo = 0;
 
-  for (const note of props.notes) {
+  for (const note of props.playResult.notes) {
     if (note.end === undefined) {
-      counts[note.result].rice += 1;
+      counts[note.result.level].rice += 1;
     } else {
-      counts[note.result].ln += 1;
+      counts[note.result.level].ln += 1;
     }
-    counts[note.result].total += 1;
-
-    totalAcc += osuV1.accTable[note.result];
-    totalHits++;
-    if (note.result < osuV1.accTable.length - 1) {
-      currentCombo += 1;
-      if (currentCombo > maxCombo) {
-        maxCombo = currentCombo;
-      }
-    } else {
-      currentCombo = 0;
-    }
+    counts[note.result.level].total += 1;
   }
   return {
     counts,
-    totalHits,
-    accuracy: totalHits > 0 ? totalAcc / totalHits : 0,
-    maxCombo,
+    accuracy: osuV1.calcAccuracy(props.playResult),
+    maxCombo: osuV1.calcMaxCombo(props.playResult),
   };
 });
 

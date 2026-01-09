@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Note, PlayedNote, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
+import type { Note, ReplayFrame, TimingPoint } from '~/lib/mania-replay/src';
 import { osuV1, type Mod } from '~/lib/mania-replay/src';
 import { createEvent } from '../mania-panel/utils';
 
@@ -7,7 +7,7 @@ export type noteColorSelector = (keys: number, object: Note) => string;
 export type Element = Konva.Group | Konva.Shape;
 export type elementCreator<T> = (ctx: Context, object: T) => Element;
 export type formatter<T> = (data: T) => string;
-export type KeyAction = Note & { result: number };
+export type KeyAction = Note & { level: number };
 
 export function createDefaultOptions() {
   return {
@@ -51,7 +51,7 @@ export function createDefaultOptions() {
       /** Custom function to select note colors */
       selectColor: undefined as noteColorSelector | undefined,
       /** Custom function to create note elements */
-      createElement: undefined as elementCreator<PlayedNote> | undefined,
+      createElement: undefined as elementCreator<Note> | undefined,
     },
     replay: {
       /** Colors of the replay keys */
@@ -67,7 +67,7 @@ export function createDefaultOptions() {
       /** Render key action from replay frames rather than notes result */
       useFrameActions: false,
       /** Custom function to create replay cursor element */
-      createElement: undefined as elementCreator<KeyAction> | undefined,
+      createElement: undefined as elementCreator<osuV1.PlayedNote> | undefined,
     },
     barline: {
       /** Stroke width of bar lines in px */
@@ -129,18 +129,15 @@ export function resolveOptions(options: Options) {
   if (options.note.width === 'auto' && options.canvas.width === 'auto') {
     throw new Error('Cannot set both note.width and stage.width to "auto"');
   }
-  let notes: PlayedNote[] = options.beatmap.notes.map(n => ({
-    ...n,
-    result: -1,
-    actions: [] as number[],
-  }));
+  let notes = options.beatmap.notes;
   let duration = 60000;
+  let playResult: osuV1.PlayResult | null = null;
   if (notes.length > 0) {
     const lastEnd = notes.reduce((max, note) => Math.max(max, note.end ?? note.start), 0);
     duration = Math.ceil(lastEnd / 1000) * 1000;
 
     if (options.replay.frames.length > 0) {
-      notes = osuV1.play(options.beatmap, options.replay.frames, options.replay.mod);
+      playResult = osuV1.play(options.beatmap, options.replay.frames, options.replay.mod);
     }
   }
 
@@ -171,6 +168,10 @@ export function resolveOptions(options: Options) {
     note: {
       ...options.note,
       width: noteWidth,
+    },
+    replay: {
+      ...options.replay,
+      playResult,
     },
     state,
   }

@@ -1,7 +1,6 @@
 import { expect, test, describe } from 'vitest';
 import { ManiaReplayFrame } from 'osu-mania-stable';
 import { osuV1 } from '../src/index';
-import { summarize } from '../src/utils';
 import type { Mod } from '../src/types'
 import { readFixture, convertBeatmap, convertReplay, formatScoreInfo, hasHold } from './utils';
 
@@ -10,8 +9,8 @@ async function runTest(name: string, osr?: string, mod?: Mod) {
 
   const convertedBeatmap = convertBeatmap(beatmap);
   const replay = convertReplay(convertedBeatmap.keys, score.replay!.frames as ManiaReplayFrame[]);
-  const notes = osuV1.play(convertedBeatmap, replay, mod);
-  const summary = summarize(notes, osuV1.accTable);
+  const result = osuV1.play(convertedBeatmap, replay, mod);
+  const summary = osuV1.summarize(result);
   const info = formatScoreInfo(score.info);
 
   expect(summary.totalHits).toBe(info.totalHits);

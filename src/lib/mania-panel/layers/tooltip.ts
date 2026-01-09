@@ -38,12 +38,12 @@ export function render(ctx: Context, layer: Konva.Layer) {
   }
 }
 
-function getData(shape: any) {
+function getData(shape: any): any {
   if (typeof shape.getAttr === 'function') {
     const attr = shape.getAttr('getData');
     if (typeof attr === 'function') return attr();
     if (attr !== undefined) return attr;
-    return undefined;
+    return shape.getParent() ? getData(shape.getParent()) : null;
   }
 }
 

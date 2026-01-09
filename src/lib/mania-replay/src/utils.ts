@@ -1,4 +1,4 @@
-import type { Beatmap, Note, ReplayFrame, PlayedNote } from './types';
+import type { Beatmap, Note, ReplayFrame } from './types';
 
 export interface NoteQueue {
   peek(): Note | null;
@@ -80,35 +80,4 @@ export function *generateActions(frames: ReplayFrame[], resolution: 'ms' | 'repl
     lastStates = frame.keyStates;
     yield actionFrame;
   }
-}
-
-export function summarize(
-  notes: PlayedNote[],
-  accTable: readonly number[]
-) {
-  const counts = Array.from({ length: accTable.length }, () => 0);
-  let totalAcc = 0;
-  let totalHits = 0;
-  let maxCombo = 0;
-  let currentCombo = 0;
-
-  for (const note of notes) {
-    counts[note.result] = counts[note.result] + 1;
-    totalAcc += accTable[note.result];
-    totalHits++;
-    if (note.result < accTable.length - 1) {
-      currentCombo += 1;
-      if (currentCombo > maxCombo) {
-        maxCombo = currentCombo;
-      }
-    } else {
-      currentCombo = 0;
-    }
-  }
-  return {
-    counts,
-    totalHits,
-    accuracy: totalHits > 0 ? totalAcc / totalHits : 0,
-    maxCombo,
-  };
 }

@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
+import 'element-plus/es/components/message/style/css';
 import VueKonva from 'vue-konva';
 import JsonViewer from 'vue3-json-viewer';
 import 'vue3-json-viewer/dist/vue3-json-viewer.css';
