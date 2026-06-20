@@ -1,0 +1,77 @@
+name: Sync to Gitee
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="$(gh release list --limit 1 --json tagName --jq '.[0].tagName' --repo ${{ github.repository }})"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release download "$TAG" --repo ${{ github.repository }}
+
+      - name: Sync to Gitee mirror
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          # Clone Gitee mirror repo (TODO: update the repo URL to match your Gitee path)
+          git clone https://oauth2:${GITEE_TOKEN}@gitee.com/zzzzv/osu-tools.git gitee-mirror
+          cd gitee-mirror
+
+          # Create project directory
+          mkdir -p mania-lab
+
+          # Copy artifacts
+          cp "${GITHUB_WORKSPACE}/mania-lab-dist.zip" mania-lab/
+
+          # Write version.txt
+          echo -n "${TAG}" > mania-lab/version.txt
+
+          # Build CHANGELOG.md
+          awk -v tag="$TAG" '
+            /^## / && index($0, "## " tag) == 1 { skip=1; next }
+            skip && /^## / { skip=0 }
+            !skip { print }
+          ' mania-lab/CHANGELOG.md 2>/dev/null > /tmp/CHANGELOG.md.old || true
+          {
+            echo "# mania-lab"
+            echo ""
+            echo "## ${TAG} ($(date +%Y-%m-%d))"
+            echo ""
+            gh release view "${TAG}" --json body --jq '.body' --repo ${{ github.repository }} 2>/dev/null || true
+            echo ""
+            cat /tmp/CHANGELOG.md.old
+          } > mania-lab/CHANGELOG.md
+
+          # Commit and push
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          git diff --cached --quiet || {
+            git commit -m "Sync ${TAG}"
+            git push
+          }
