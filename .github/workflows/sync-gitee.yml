@@ -33,12 +33,13 @@ jobs:
 
       - name: Sync to Gitee mirror
         env:
+          GH_TOKEN: ${{ github.token }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         shell: bash
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
 
-          # Clone Gitee mirror repo (TODO: update the repo URL to match your Gitee path)
+          # Clone Gitee mirror repo
           git clone https://oauth2:${GITEE_TOKEN}@gitee.com/zzzzv/osu-tools.git gitee-mirror
           cd gitee-mirror
 
