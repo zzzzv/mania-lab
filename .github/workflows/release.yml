@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - uses: pnpm/action-setup@v4
       with:
@@ -26,22 +28,28 @@ jobs:
     - run: pnpm install --frozen-lockfile
     - run: pnpm run build
 
-    - name: Create zip
-      run: |
-        cd dist
-        zip -r ../mania-lab-dist.zip .
-
     - name: Get date tag
       id: date
       run: echo "tag=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
 
+    - name: Create zip
+      run: |
+        cd dist
+        zip -r ../mania-lab-${{ steps.date.outputs.tag }}.zip .
+
     - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ steps.date.outputs.tag }}
-        name: ${{ steps.date.outputs.tag }}
-        files: mania-lab-dist.zip
-        draft: false
-        prerelease: false
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        TAG="${{ steps.date.outputs.tag }}"
+        PREV="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+        if [ -n "$PREV" ]; then
+          RANGE="${PREV}..HEAD"
+        else
+          RANGE="HEAD"
+        fi
+        NOTES="$(git log "$RANGE" --format="- %s" --reverse)"
+        if [ -z "$NOTES" ]; then
+          NOTES="$(git log -1 --format=%s)"
+        fi
+        gh release create "$TAG" "mania-lab-${TAG}.zip" --title "$TAG" --notes "$NOTES"

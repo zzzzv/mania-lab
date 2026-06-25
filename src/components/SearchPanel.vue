@@ -9,7 +9,7 @@ import LazerCacheToggle from './search/LazerCacheToggle.vue'
 import LastPlayedFilter from './search/LastPlayedFilter.vue'
 import CollectionPanel from './search/CollectionPanel.vue'
 
-const props = defineProps<{ modelValue: SearchState; loading?: boolean; stableAvailable: boolean; lazerAvailable: boolean; beatmapCount?: number }>()
+const props = defineProps<{ modelValue: SearchState; loading?: boolean; stableAvailable: boolean; lazerAvailable: boolean; srAvailable?: boolean; beatmapCount?: number }>()
 const emit = defineEmits<{ 'update:modelValue': [v: SearchState]; commit: []; 'exportCollection': [name: string, overwrite: boolean] }>()
 
 const collapsed = ref(false)
@@ -139,6 +139,7 @@ const sortOptions: { label: string; value: SortField }[] = [
             <div class="bf-row">
               <SRRangeFilter
                 :model-value="modelValue.filter.srRange"
+                :disabled="srAvailable === false"
                 @update:model-value="v => emitFilter({ srRange: v })"
               />
 

@@ -4,6 +4,7 @@ import { NAlert, NH2, useMessage } from 'naive-ui'
 import { api } from '@/api'
 import { getBeatmaps } from '@/services/stable'
 import { queryLazerBeatmaps } from '@/services/lazer'
+import { srCache, srAvailable } from '@/services/mania-sr'
 import CardGrid from '@/components/CardGrid.vue'
 import SearchPanel from '@/components/SearchPanel.vue'
 import { runSearch } from '@/components/search/pipeline'
@@ -20,6 +21,11 @@ const message = useMessage()
 
 const stableAvailable = ref(true)
 const lazerAvailable = ref(true)
+
+// Notify when SR pack is unavailable (404 etc.)
+watch(srAvailable, (ok) => {
+  if (!ok) message.warning('Star rating 数据包不可用, 需要后端先计算SR数据')
+})
 
 // ── Committed search state ──
 const committedFilter = ref({ ...search.state })
@@ -61,6 +67,8 @@ async function commitFilter() {
 }
 
 onMounted(async () => {
+  // Check SR data availability early, before beatmap loading
+  srCache.init()
   try {
     const s: ApiStatus = await api.getStatus()
     stableAvailable.value = s.stable?.isAvailable ?? false
@@ -106,7 +114,12 @@ async function handleExportCollection(name: string, overwrite: boolean) {
 <template>
   <div class="beatmaps-view">
     <NAlert v-if="error" type="error" :title="error" closable @close="error = null" />
-    <SearchPanel v-model="search.state" :loading="loading" :stable-available="stableAvailable" :lazer-available="lazerAvailable" :beatmap-count="filtered.length" @commit="commitFilter" @export-collection="handleExportCollection" />
+    <SearchPanel
+      v-model="search.state" :loading="loading"
+      :stable-available="stableAvailable" :lazer-available="lazerAvailable"
+      :sr-available="srAvailable" :beatmap-count="filtered.length"
+      @commit="commitFilter" @export-collection="handleExportCollection"
+    />
     <NH2>Beatmaps ({{ filtered.length }})</NH2>
     <CardGrid :items="filtered" :loading="loading" />
   </div>

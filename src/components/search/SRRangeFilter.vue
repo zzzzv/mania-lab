@@ -5,6 +5,7 @@ import type { SRRange } from './types'
 
 const props = defineProps<{
   modelValue: SRRange
+  disabled?: boolean
 }>()
 const emit = defineEmits<{
   'update:modelValue': [v: SRRange]
@@ -97,39 +98,44 @@ function setLinkMode(m: LinkMode) {
 </script>
 
 <template>
-  <div class="sr-row">
-    <div class="sr-half">
-      <div v-if="linkMode !== 'xxy'" class="slider-box">
-        <NSlider :value="[local.ppyMin, local.ppyMax ?? MAX]" :min="0" :max="MAX" :step="0.1" range style="flex:1" @update:value="onPPY" />
-        <span class="sr-val">{{ local.ppyMin.toFixed(1) }}–{{ local.ppyMax !== null ? local.ppyMax.toFixed(1) : '∞' }}</span>
+  <div class="sr-row" :class="{ disabled }">
+    <div v-if="disabled" class="sr-unavailable">Star rating 数据包不可用, 需要后端先计算SR数据</div>
+    <template v-else>
+      <div class="sr-half">
+        <div v-if="linkMode !== 'xxy'" class="slider-box">
+          <NSlider :value="[local.ppyMin, local.ppyMax ?? MAX]" :min="0" :max="MAX" :step="0.1" range style="flex:1" @update:value="onPPY" />
+          <span class="sr-val">{{ local.ppyMin.toFixed(1) }}–{{ local.ppyMax !== null ? local.ppyMax.toFixed(1) : '∞' }}</span>
+        </div>
+        <div v-else class="slider-box">
+          <NSlider :value="[deltaMin, deltaMax]" :min="-DELTA_MAX" :max="DELTA_MAX" :step="0.1" range style="flex:1" @update:value="onDelta" />
+          <span class="sr-val">Δ{{ deltaMin.toFixed(1) }}–{{ deltaMax.toFixed(1) }}</span>
+        </div>
       </div>
-      <div v-else class="slider-box">
-        <NSlider :value="[deltaMin, deltaMax]" :min="-DELTA_MAX" :max="DELTA_MAX" :step="0.1" range style="flex:1" @update:value="onDelta" />
-        <span class="sr-val">Δ{{ deltaMin.toFixed(1) }}–{{ deltaMax.toFixed(1) }}</span>
-      </div>
-    </div>
 
-    <div class="link-toggle">
-      <button :class="['lt-btn', { active: linkMode === 'ppy' }]" @click="setLinkMode('ppy')">PPY</button>
-      <button :class="['lt-btn', { active: linkMode === 'none' }]" @click="setLinkMode('none')">∥</button>
-      <button :class="['lt-btn', { active: linkMode === 'xxy' }]" @click="setLinkMode('xxy')">XXY</button>
-    </div>
+      <div class="link-toggle">
+        <button :class="['lt-btn', { active: linkMode === 'ppy' }]" @click="setLinkMode('ppy')">PPY</button>
+        <button :class="['lt-btn', { active: linkMode === 'none' }]" @click="setLinkMode('none')">∥</button>
+        <button :class="['lt-btn', { active: linkMode === 'xxy' }]" @click="setLinkMode('xxy')">XXY</button>
+      </div>
 
-    <div class="sr-half">
-      <div v-if="linkMode !== 'ppy'" class="slider-box">
-        <NSlider :value="[local.xxyMin, local.xxyMax ?? MAX]" :min="0" :max="MAX" :step="0.1" range style="flex:1" @update:value="onXXY" />
-        <span class="sr-val">{{ local.xxyMin.toFixed(1) }}–{{ local.xxyMax !== null ? local.xxyMax.toFixed(1) : '∞' }}</span>
+      <div class="sr-half">
+        <div v-if="linkMode !== 'ppy'" class="slider-box">
+          <NSlider :value="[local.xxyMin, local.xxyMax ?? MAX]" :min="0" :max="MAX" :step="0.1" range style="flex:1" @update:value="onXXY" />
+          <span class="sr-val">{{ local.xxyMin.toFixed(1) }}–{{ local.xxyMax !== null ? local.xxyMax.toFixed(1) : '∞' }}</span>
+        </div>
+        <div v-else class="slider-box">
+          <NSlider :value="[deltaMin, deltaMax]" :min="-DELTA_MAX" :max="DELTA_MAX" :step="0.1" range style="flex:1" @update:value="onDelta" />
+          <span class="sr-val">Δ{{ deltaMin.toFixed(1) }}–{{ deltaMax.toFixed(1) }}</span>
+        </div>
       </div>
-      <div v-else class="slider-box">
-        <NSlider :value="[deltaMin, deltaMax]" :min="-DELTA_MAX" :max="DELTA_MAX" :step="0.1" range style="flex:1" @update:value="onDelta" />
-        <span class="sr-val">Δ{{ deltaMin.toFixed(1) }}–{{ deltaMax.toFixed(1) }}</span>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
 .sr-row { display:flex; align-items:center; gap:4px; flex:1; }
+.sr-row.disabled { opacity:0.45; pointer-events:none; }
+.sr-unavailable { font-size:12px; color:#999; padding:6px 0; user-select:none; }
 .sr-half { display:flex; align-items:center; gap:4px; flex:1; min-width:0; }
 .slider-box { display:flex; align-items:center; gap:2px; flex:1; min-width:0; }
 .sr-val { font-size:11px; color:#999; min-width:35px; text-align:right; white-space:nowrap; }

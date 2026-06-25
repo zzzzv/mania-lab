@@ -46,7 +46,7 @@ jobs:
           mkdir -p mania-lab
 
           # Copy artifacts
-          cp "${GITHUB_WORKSPACE}/mania-lab-dist.zip" mania-lab/
+          cp "${GITHUB_WORKSPACE}/mania-lab-${TAG}.zip" mania-lab/
 
           # Write version.txt
           echo -n "${TAG}" > mania-lab/version.txt

@@ -2,7 +2,6 @@ import { api } from '@/api'
 import type { Beatmap } from '@/models'
 import { timed } from '@/services/timing'
 import { applyQuery } from '@/components/search/pipeline'
-import { srCache } from '@/services/mania-sr'
 import { LazerBeatmap } from './beatmap'
 import { buildRql } from './rql'
 import { getCachedBeatmaps, updateCache } from './cache'
@@ -19,7 +18,6 @@ const NO_EXPAND = ['BeatmapSet', 'UserSettings', 'File', 'HitEvents', 'Pauses']
  */
 export async function queryLazerBeatmaps(filter: QueryState, useCache = false): Promise<Beatmap[]> {
   return timed('queryLazerBeatmaps', 100, async () => {
-    await srCache.init()
     // Cache hit: apply basic filter locally
     if (useCache) {
       const cached = getCachedBeatmaps()
