@@ -28,7 +28,9 @@ function sortValue(b: Beatmap, field: SortField): number | string | Date {
 
 export function applyQuery(items: readonly Beatmap[], query: QueryState): Beatmap[] {
   let result = [...items]
-  if (query.keys.length > 0) result = result.filter(x => query.keys.includes(x.key))
+  if (query.keys.length > 0) {
+    result = result.filter(x => query.keys.some(k => k === -1 ? x.key < 4 : k === -2 ? x.key > 10 : k === x.key))
+  }
   if (query.rankedStatuses.length > 0) result = result.filter(x => query.rankedStatuses.includes(x.rankedStatus))
   const words = query.searchText.trim().toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length > 0) {

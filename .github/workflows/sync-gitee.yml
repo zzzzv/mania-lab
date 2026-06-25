@@ -57,12 +57,21 @@ jobs:
             skip && /^## / { skip=0 }
             !skip { print }
           ' mania-lab/CHANGELOG.md 2>/dev/null > /tmp/CHANGELOG.md.old || true
+
+          # 获取 release body
+          BODY=""
+          for i in 1 2 3; do
+            BODY="$(gh release view "${TAG}" --json body --jq '.body' --repo ${{ github.repository }} 2>/dev/null)"
+            if [ -n "$BODY" ]; then break; fi
+            sleep 2
+          done
+
           {
             echo "# mania-lab"
             echo ""
             echo "## ${TAG} ($(date +%Y-%m-%d))"
             echo ""
-            gh release view "${TAG}" --json body --jq '.body' --repo ${{ github.repository }} 2>/dev/null || true
+            echo "$BODY"
             echo ""
             cat /tmp/CHANGELOG.md.old
           } > mania-lab/CHANGELOG.md

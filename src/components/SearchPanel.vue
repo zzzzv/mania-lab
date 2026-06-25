@@ -39,10 +39,14 @@ function emitFilter(patch: Partial<SearchState['filter']>) {
   emitUpdate({ filter: { ...props.modelValue.filter, ...patch } })
 }
 
-const keyOptions = Array.from({ length: 10 }, (_, i) => ({
-  label: `${i + 1}K`,
-  value: i + 1,
-}))
+const keyOptions = [
+  { label: '<4K', value: -1 },
+  ...Array.from({ length: 10 }, (_, i) => ({
+    label: `${i + 1}K`,
+    value: i + 1,
+  })),
+  { label: '>10K', value: -2 },
+]
 
 const statusOptions = [
   { label: 'Unknown', value: 0 },

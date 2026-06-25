@@ -30,7 +30,11 @@ export function buildRql(q: QueryState): string {
   const parts: string[] = ['Ruleset.ShortName=="mania"']
 
   if (q.keys.length > 0) {
-    const ors = q.keys.map(k => `Difficulty.CircleSize==${k}`)
+    const ors = q.keys.map(k => {
+      if (k === -1) return 'Difficulty.CircleSize<4'
+      if (k === -2) return 'Difficulty.CircleSize>10'
+      return `Difficulty.CircleSize==${k}`
+    })
     parts.push(ors.length === 1 ? ors[0]! : `(${ors.join(' OR ')})`)
   }
 

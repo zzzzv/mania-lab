@@ -5,7 +5,7 @@ import type { SearchState } from '@/components/search/types'
 const defaultSearchState: SearchState = {
   client: null,
   lazerCache: false,
-  query: { keys: [], rankedStatuses: [], searchText: '', lastPlayed: { minIdx: 0, maxIdx: 0, unplayed: true } },
+  query: { keys: [7], rankedStatuses: [4], searchText: '', lastPlayed: { minIdx: 0, maxIdx: 30, unplayed: false } },
   filter: { srRange: { ppyMin: 0, ppyMax: null, xxyMin: 0, xxyMax: null }, sortField: null, scoreMode: 'overview' },
 }
 
