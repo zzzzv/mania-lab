@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import { NConfigProvider, NMenu, NMessageProvider } from 'naive-ui'
 import { h } from 'vue'
 import { RouterLink } from 'vue-router'
+import SettingsDialog from '@/components/SettingsDialog.vue'
 
 const menuOptions = [
   {
@@ -20,6 +21,9 @@ const menuOptions = [
         <div class="topbar-inner">
           <span class="logo">mania-lab</span>
           <NMenu mode="horizontal" :options="menuOptions" />
+          <div class="topbar-right">
+            <SettingsDialog />
+          </div>
         </div>
       </header>
       <main class="content">
@@ -30,5 +34,11 @@ const menuOptions = [
   </NConfigProvider>
 </template>
 
-
+<style scoped>
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+</style>
 
