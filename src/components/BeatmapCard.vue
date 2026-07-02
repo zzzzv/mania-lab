@@ -1,28 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NCard, NIcon, NEllipsis } from 'naive-ui'
-import { Star, Moon } from '@vicons/fa'
+import { NCard, NEllipsis } from 'naive-ui'
 import { RankedStatuses } from 'osu-stable-db'
 import type { Beatmap } from '@/models'
 import { useSettingsStore } from '@/stores/settings'
-import { ModsBadge, StatusBadge, ClientBadge } from './badges'
+import { ModsBadge, StatusBadge, ClientBadge, SRBadge } from './badges'
 import { useBestScore } from '@/composables/useBestScore'
 
 const props = defineProps<{ beatmap: Beatmap }>()
 const bgUrl = ref<string | null>(null)
-const ppyRating = ref<string>('-')
-const xxyRating = ref<string | null>(null)
-const nmSR = ref(0)
 
 const bm = props.beatmap
 
 onMounted(async () => {
   bgUrl.value = await bm.getBackgroundUrl()
-  nmSR.value = bm.maniaSR?.PPY.NM ?? 0
-  ppyRating.value = nmSR.value.toFixed(2)
-  if (bm.maniaSR) {
-    xxyRating.value = bm.maniaSR.XXY.NM.toFixed(2)
-  }
 })
 
 const settings = useSettingsStore()
@@ -151,7 +142,7 @@ function fmtDp1(n: number) {
         </div>
         <div class="row">
           <span class="cell-left"><slot name="row-3-left">
-            <span>{{ ppyRating }}<NIcon size="12" style="margin-left:2px"><Star /></NIcon><template v-if="xxyRating"> {{ xxyRating }}<NIcon size="12" style="margin-left:2px"><Moon /></NIcon></template></span>
+            <span><SRBadge :mania-sr="bm.maniaSR" /></span>
           </slot></span>
           <span class="cell-right">
             <slot v-if="props.beatmap.scores.length > 0" name="row-3-right">

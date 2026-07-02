@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NModal, NCard, NSwitch, NRadioGroup, NRadioButton } from 'naive-ui'
+import { NModal, NCard, NSwitch, NRadioGroup, NRadioButton, NSelect } from 'naive-ui'
 import { useSettingsStore } from '@/stores/settings'
+import type { SRDisplayMode } from '@/stores/settings'
 
 const store = useSettingsStore()
 const show = ref(false)
+
+const srModeOptions: { label: string; value: SRDisplayMode }[] = [
+  { label: 'PPY.NM + XXY.NM', value: 'dual-nm' },
+  { label: 'PPY.HT + XXY.HT', value: 'dual-ht' },
+  { label: 'PPY.DT + XXY.DT', value: 'dual-dt' },
+  { label: 'PPY: NM HT DT', value: 'ppy-all' },
+  { label: 'XXY: NM HT DT', value: 'xxy-all' },
+]
 </script>
 
 <template>
@@ -28,6 +37,14 @@ const show = ref(false)
           <NRadioButton value="accuracy" label="Acc" />
           <NRadioButton value="score" label="Score" />
         </NRadioGroup>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">SR 显示模式</span>
+        <NSelect
+          :value="store.srDisplayMode" :options="srModeOptions"
+          size="small" style="width:200px"
+          @update:value="v => store.srDisplayMode = v"
+        />
       </div>
     </div>
   </NModal>
