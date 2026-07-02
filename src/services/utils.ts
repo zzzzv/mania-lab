@@ -30,4 +30,10 @@ export class DataCache<T> {
     if (this._data === null) throw new Error('DataCache not initialised – call init() first')
     return this._data
   }
+
+  /** Drop cached data so the next `init()` re-fetches. */
+  reset(): void {
+    this._data = null
+    this._pending = null
+  }
 }

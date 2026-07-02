@@ -26,7 +26,7 @@ const collectionOptions = computed(() =>
 )
 
 function stripClient(s: SearchState): SearchState {
-  const { client: _, lazerCache: __, ...rest } = s
+  const { client: _, lazerCache: __, stableCache: ___, ...rest } = s
   return rest as SearchState
 }
 
@@ -35,6 +35,7 @@ function mergeState(saved: SearchState): SearchState {
     ...saved,
     client: props.modelValue.client,
     lazerCache: props.modelValue.lazerCache,
+    stableCache: props.modelValue.stableCache,
   }
 }
 

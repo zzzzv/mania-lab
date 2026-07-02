@@ -37,7 +37,7 @@ watch(() => search.state, () => {
   committedFilter.value = { ...search.state }
 }, { deep: true })
 
-// Switch client → clear old data; auto-fetch only for stable or lazer+cache
+// Switch client → clear old data; stable always auto-fetches
 watch(() => search.state.client, () => {
   beatmaps.value = []
   const s = search.state
@@ -52,12 +52,12 @@ async function commitFilter() {
   loading.value = true
   error.value = null
   try {
-    if (!isLazer) {
-      if (!stableAvailable.value) { error.value = 'Stable 后端不可用'; loading.value = false; return }
-      beatmaps.value = await getBeatmaps()
-    } else {
+    if (isLazer) {
       if (!lazerAvailable.value) { error.value = 'Lazer 后端不可用'; loading.value = false; return }
       beatmaps.value = await queryLazerBeatmaps(q, s.lazerCache)
+    } else {
+      if (!stableAvailable.value) { error.value = 'Stable 后端不可用'; loading.value = false; return }
+      beatmaps.value = await getBeatmaps(s.stableCache)
     }
   } catch (e) {
     error.value = String(e)
@@ -76,13 +76,13 @@ onMounted(async () => {
     if (!stableAvailable.value && lazerAvailable.value) {
       search.state.client = 'lazer'
     }
-    const isLazer = search.state.client === 'lazer'
-    if (!isLazer && stableAvailable.value) {
+    const client = search.state.client
+    if (client === 'stable' && stableAvailable.value) {
       commitFilter()
-    } else if (isLazer && search.state.lazerCache) {
+    } else if (client === 'lazer' && search.state.lazerCache) {
       commitFilter()
-    } else if (isLazer) {
-      loading.value = false
+    } else if (client === 'lazer') {
+      loading.value = false  // 等用户点"查询Lazer数据库"
     } else {
       error.value = '后端服务不可用'
       loading.value = false

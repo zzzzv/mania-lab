@@ -5,7 +5,7 @@ import { ChevronRight, ChevronDown } from '@vicons/fa'
 import type { SearchState } from './search/types'
 import type { SortField } from './search/types'
 import SRRangeFilter from './search/SRRangeFilter.vue'
-import LazerCacheToggle from './search/LazerCacheToggle.vue'
+import CacheToggle from './search/CacheToggle.vue'
 import LastPlayedFilter from './search/LastPlayedFilter.vue'
 import CollectionPanel from './search/CollectionPanel.vue'
 
@@ -14,7 +14,10 @@ const emit = defineEmits<{ 'update:modelValue': [v: SearchState]; commit: []; 'e
 
 const collapsed = ref(false)
 
-const isAuto = computed(() => props.modelValue.client !== 'lazer' || props.modelValue.lazerCache)
+const isAuto = computed(() => {
+  if (props.modelValue.client === 'lazer') return props.modelValue.lazerCache
+  return true  // stable 始终自动查询
+})
 
 const isFullFetch = computed(() =>
   props.modelValue.client === 'lazer'
@@ -130,11 +133,11 @@ const sortOptions: { label: string; value: SortField }[] = [
                 :model-value="modelValue.query.lastPlayed"
                 @update:model-value="v => (emitQuery({ lastPlayed: v }), autoCommit())"
               />
-              <button v-if="!isAuto" class="btn-query" :disabled="loading" @click.stop="emit('commit')">查询Lazer数据库</button>
-              <LazerCacheToggle
-                v-if="modelValue.client === 'lazer'"
-                :model-value="modelValue.lazerCache"
-                @update:lazer-cache="v => emitUpdate({ lazerCache: v })"
+              <button v-if="modelValue.client === 'lazer' && !isAuto" class="btn-query" :disabled="loading" @click.stop="emit('commit')">查询Lazer数据库</button>
+              <CacheToggle
+                :model-value="modelValue.client === 'lazer' ? modelValue.lazerCache : modelValue.stableCache"
+                :client="modelValue.client ?? 'stable'"
+                @update:model-value="v => emitUpdate(modelValue.client === 'lazer' ? { lazerCache: v } : { stableCache: v })"
               />
             </div>
           </div>

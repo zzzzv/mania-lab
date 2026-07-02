@@ -53,6 +53,7 @@ export interface FilterState {
 export interface SearchState {
   client: 'stable' | 'lazer' | null
   lazerCache: boolean
+  stableCache: boolean
   query: QueryState
   filter: FilterState
 }
