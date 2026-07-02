@@ -29,6 +29,9 @@ export interface SRRange {
   ppyMax: number | null  // null = ∞
   xxyMin: number
   xxyMax: number | null  // null = ∞
+  diffMin: number         // min (xxy - ppy) per beatmap
+  diffMax: number         // max (xxy - ppy) per beatmap
+  linkMode?: 'ppy' | 'none' | 'xxy'  // which slider pair is active, saved for presets
 }
 
 export type SortField = 

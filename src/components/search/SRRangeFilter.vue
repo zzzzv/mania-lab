@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { NSlider } from 'naive-ui'
 import type { SRRange } from './types'
+import { clamp } from '@/utils'
 
 const props = defineProps<{
   modelValue: SRRange
@@ -16,16 +17,24 @@ const DELTA_MAX = 5
 
 type LinkMode = 'ppy' | 'none' | 'xxy'
 const local = ref(clone(props.modelValue))
-const linkMode = ref<LinkMode>('none')
+const linkMode = ref<LinkMode>(props.modelValue.linkMode ?? 'none')
 const deltaMin = ref(0)
 const deltaMax = ref(0)
 
 watch(() => props.modelValue, v => {
   local.value = clone(v)
+  linkMode.value = v.linkMode ?? 'none'
+  deltaMin.value = v.diffMin
+  deltaMax.value = v.diffMax
 }, { deep: true })
 
 function clone(v: SRRange): SRRange {
-  return { ppyMin: v.ppyMin, ppyMax: v.ppyMax, xxyMin: v.xxyMin, xxyMax: v.xxyMax }
+  return {
+    ppyMin: v.ppyMin, ppyMax: v.ppyMax,
+    xxyMin: v.xxyMin, xxyMax: v.xxyMax,
+    diffMin: v.diffMin, diffMax: v.diffMax,
+    linkMode: v.linkMode,
+  }
 }
 
 const debounce = ref<ReturnType<typeof setTimeout>>()
@@ -36,64 +45,69 @@ function emitUpdate() {
 }
 
 function onPPY(v: number[]) {
-  local.value.ppyMin = v[0]!
-  local.value.ppyMax = v[1]! >= MAX ? null : v[1]!
-  if (linkMode.value === 'ppy') applyPPYDelta()
-  if (linkMode.value === 'xxy') applyXXYDelta()
+  const [min, max] = v[0]! <= v[1]! ? [v[0]!, v[1]!] : [v[1]!, v[0]!]
+  local.value.ppyMin = min
+  local.value.ppyMax = max >= MAX ? null : max
   emitUpdate()
 }
 
 function onXXY(v: number[]) {
-  local.value.xxyMin = v[0]!
-  local.value.xxyMax = v[1]! >= MAX ? null : v[1]!
-  if (linkMode.value === 'xxy') applyXXYDelta()
-  if (linkMode.value === 'ppy') applyPPYDelta()
+  const [min, max] = v[0]! <= v[1]! ? [v[0]!, v[1]!] : [v[1]!, v[0]!]
+  local.value.xxyMin = min
+  local.value.xxyMax = max >= MAX ? null : max
   emitUpdate()
 }
 
 function onDelta(v: number[]) {
-  deltaMin.value = v[0]!
-  deltaMax.value = v[1]!
-  applyDelta()
+  const [min, max] = v[0]! <= v[1]! ? [v[0]!, v[1]!] : [v[1]!, v[0]!]
+  deltaMin.value = min
+  deltaMax.value = max
+  local.value.diffMin = min
+  local.value.diffMax = max
   emitUpdate()
 }
 
-function applyDelta() {
-  if (linkMode.value === 'ppy') applyPPYDelta()
-  if (linkMode.value === 'xxy') applyXXYDelta()
-}
-
-function applyPPYDelta() {
-  local.value.xxyMin = clamp(local.value.ppyMin + deltaMin.value, 0, MAX)
-  local.value.xxyMax = local.value.ppyMax !== null
-    ? clamp(local.value.ppyMax + deltaMax.value, 0, MAX)
-    : null
-}
-
-function applyXXYDelta() {
-  local.value.ppyMin = clamp(local.value.xxyMin + deltaMin.value, 0, MAX)
-  local.value.ppyMax = local.value.xxyMax !== null
-    ? clamp(local.value.xxyMax + deltaMax.value, 0, MAX)
-    : null
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n))
-}
-
 function setLinkMode(m: LinkMode) {
+  const prev = linkMode.value
   linkMode.value = m
+  local.value.linkMode = m
   if (m === 'ppy') {
-    deltaMin.value = +(local.value.xxyMin - local.value.ppyMin).toFixed(1)
-    deltaMax.value = local.value.ppyMax !== null
-      ? +(local.value.xxyMax! - local.value.ppyMax).toFixed(1)
-      : 0
+    // 先算 diff (xxy - ppy) 再清零 xxy — 大值与小值交叉相减
+    const dMin = +(local.value.xxyMin - (local.value.ppyMax ?? local.value.xxyMax ?? MAX)).toFixed(1)
+    const dMax = +((local.value.xxyMax ?? local.value.ppyMax ?? MAX) - local.value.ppyMin).toFixed(1)
+    local.value.xxyMin = 0
+    local.value.xxyMax = null
+    deltaMin.value = dMin
+    deltaMax.value = dMax
+    local.value.diffMin = dMin
+    local.value.diffMax = dMax
   } else if (m === 'xxy') {
-    deltaMin.value = +(local.value.ppyMin - local.value.xxyMin).toFixed(1)
-    deltaMax.value = local.value.xxyMax !== null
-      ? +(local.value.ppyMax! - local.value.xxyMax).toFixed(1)
-      : 0
+    // 先算 diff (ppy - xxy) 再清零 ppy — 大值与小值交叉相减
+    const dMin = +(local.value.ppyMin - (local.value.xxyMax ?? local.value.ppyMax ?? MAX)).toFixed(1)
+    const dMax = +((local.value.ppyMax ?? local.value.xxyMax ?? MAX) - local.value.xxyMin).toFixed(1)
+    local.value.ppyMin = 0
+    local.value.ppyMax = null
+    deltaMin.value = dMin
+    deltaMax.value = dMax
+    local.value.diffMin = dMin
+    local.value.diffMax = dMax
+  } else {
+    // ∥ 模式：用一侧 + diff 还原另一侧初值，diff 设成全范围
+    if (prev === 'ppy') {
+      local.value.xxyMin = clamp(local.value.ppyMin + local.value.diffMin, 0, MAX)
+      local.value.xxyMax = local.value.ppyMax !== null
+        ? clamp(local.value.ppyMax + local.value.diffMax, 0, MAX)
+        : null
+    } else if (prev === 'xxy') {
+      local.value.ppyMin = clamp(local.value.xxyMin + local.value.diffMin, 0, MAX)
+      local.value.ppyMax = local.value.xxyMax !== null
+        ? clamp(local.value.xxyMax + local.value.diffMax, 0, MAX)
+        : null
+    }
+    local.value.diffMin = -DELTA_MAX
+    local.value.diffMax = DELTA_MAX
   }
+  emitUpdate()
 }
 </script>
 

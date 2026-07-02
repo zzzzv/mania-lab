@@ -1,5 +1,5 @@
 import type { Beatmap, CardItem, Score } from '@/models'
-import type { SearchState, SortField, QueryState, ScoreSelectorMode } from './types'
+import type { SearchState, SortField, QueryState, ScoreSelectorMode, SRRange } from './types'
 import { lastPlayedTicks } from './types'
 import { timed } from '@/services/timing'
 
@@ -60,15 +60,21 @@ export function applyQuery(items: readonly Beatmap[], query: QueryState): Beatma
   return result
 }
 
-function applyFilter(items: readonly Beatmap[], sr: { ppyMin: number; ppyMax: number | null; xxyMin: number; xxyMax: number | null }): Beatmap[] {
-  if (!(sr.ppyMin > 0 || sr.ppyMax !== null || sr.xxyMin > 0 || sr.xxyMax !== null)) return [...items]
+function applyFilter(items: readonly Beatmap[], sr: SRRange): Beatmap[] {
+  if (!(sr.ppyMin > 0 || sr.ppyMax !== null || sr.xxyMin > 0 || sr.xxyMax !== null || sr.diffMin !== -5 || sr.diffMax !== 5)) return [...items]
   return items.filter(x => {
     const m = x.maniaSR
     if (!m) return false
+    // ppy range
     if (m.PPY.NM < sr.ppyMin) return false
     if (sr.ppyMax !== null && m.PPY.NM > sr.ppyMax) return false
+    // xxy range
     if (m.XXY.NM < sr.xxyMin) return false
     if (sr.xxyMax !== null && m.XXY.NM > sr.xxyMax) return false
+    // diff range per beatmap
+    const diff = sr.linkMode === 'xxy' ? m.PPY.NM - m.XXY.NM : m.XXY.NM - m.PPY.NM
+    if (diff < sr.diffMin) return false
+    if (diff > sr.diffMax) return false
     return true
   })
 }

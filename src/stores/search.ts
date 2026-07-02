@@ -6,7 +6,7 @@ const defaultSearchState: SearchState = {
   client: null,
   lazerCache: false,
   query: { keys: [7], rankedStatuses: [4], searchText: '', lastPlayed: { minIdx: 0, maxIdx: 30, unplayed: false } },
-  filter: { srRange: { ppyMin: 0, ppyMax: null, xxyMin: 0, xxyMax: null }, sortField: null, scoreMode: 'overview' },
+  filter: { srRange: { ppyMin: 0, ppyMax: null, xxyMin: 0, xxyMax: null, diffMin: -5, diffMax: 5, linkMode: 'none' }, sortField: null, scoreMode: 'overview' },
 }
 
 export const useSearchStore = defineStore('search', () => {
